@@ -160,3 +160,72 @@ data:
       # Client TLS using generated certificates
       auto-tls: false
 {{- end }}
+
+  etcdbr.conf.yaml: |-
+    etcdConnectionConfig:
+{{- if .Values.etcd.enableTLS }}
+        # username: admin
+        # password: admin
+        endpoints:
+          - https://{{ .Values.name }}-local:{{ .Values.etcd.clientPort }}
+        connectionTimeout: {{ .Values.backup.etcdConnectionTimeout }}
+        insecureTransport: false
+        insecureSkipVerify: false
+        certFile: /var/etcd/ssl/client/tls.crt
+        keyFile: /var/etcd/ssl/client/tls.key
+        caFile: /var/etcd/ssl/client/ca.crt
+{{ else }}
+        endpoints:
+          - http://{{ .Values.name }}-local:{{ .Values.etcd.clientPort }}
+{{- end }}
+    serverConfig:
+        port: 8080
+        # enableProfiling: true
+{{- if .Values.etcd.enableTLS }}
+        server-cert: /var/etcd/ssl/server/tls.crt
+        server-key: /var/etcd/ssl/server/tls.key
+{{- end }}
+    snapshotterConfig:
+{{-if .Values.backup.fullSnapshotSchedule }}
+        schedule: {{ .Values.backup.fullSnapshotSchedule }}
+{{- end }}
+{{- if .Values.backup.deltaSnapshotPeriod }}
+        deltaSnapshotPeriod: {{ .Values.backup.deltaSnapshotPeriod }}
+{{- end }}
+{{- if .Values.backup.deltaSnapshotMemoryLimit }}
+        deltaSnapshotMemoryLimit: {{ int $.Values.backup.deltaSnapshotMemoryLimit }}
+{{- end }}
+{{- if .Values.backup.garbageCollectionPeriod }}
+        garbageCollectionPeriod: {{ .Values.backup.garbageCollectionPeriod }}
+{{- end}}
+{{- if .Values.backup.garbageCollectionPolicy }}
+        garbageCollectionPolicy: {{ .Values.backup.garbageCollectionPolicy }}
+{{- end }}
+{{- if eq .Values.backup.garbageCollectionPolicy "LimitBased" and .Values.backup.maxBackups }}
+        maxBackups: {{ int $.Values.backup.maxBackups }}
+{{- end }}
+{{- if .Values.store.storageProvider }}
+    snapstoreConfig:
+        provider: {{ .Values.store.storageProvider }}
+        # container: "backup"
+{{- if .Values.store.storePrefix }}
+        prefix: {{ .Values.store.storePrefix }}
+{{- end }}
+        # maxParallelChunkUploads: 5
+        tempDir: {{ .Values.backup.snapstoreTempDir }}
+{{- end }}
+    restorationConfig:
+        initialCluster: "default=http://localhost:2380"
+        initialClusterToken: "etcd-cluster"
+        restoreDataDir: /var/etcd/data/new.etcd
+        initialAdvertisePeerURLs:
+            - "http://localhost:2380"
+        name: "default"
+        skipHashCheck: false
+        maxFetchers: 6
+{{- if .Values.backup.etcdQuotaBytes }}
+        embeddedEtcdQuotaBytes: {{ int $.Values.backup.etcdQuotaBytes }}
+{{- end }}
+{{-if .Values.etcd.defragmentationSchedule }}
+    defragmentationSchedule: {{ .Values.etcd.defragmentationSchedule }}
+{{- end }}

@@ -116,56 +116,7 @@ spec:
         command:
         - etcdbrctl
         - server
-{{- if .Values.etcd.defragmentationSchedule }}
-        - --defragmentation-schedule={{ .Values.etcd.defragmentationSchedule }}
-{{- end }}
-{{- if .Values.backup.fullSnapshotSchedule }}
-        - --schedule={{ .Values.backup.fullSnapshotSchedule }}
-{{- end }}
-        - --garbage-collection-policy={{ .Values.backup.garbageCollectionPolicy }}
-{{- if eq .Values.backup.garbageCollectionPolicy "LimitBased" }}
-        - --max-backups={{ .Values.backup.maxBackups }}
-{{- end }}
-        - --data-dir=/var/etcd/data/new.etcd
-{{- if  .Values.store.storageProvider }}
-        - --storage-provider={{ .Values.store.storageProvider }}
-{{- end }}
-{{- if .Values.store.storePrefix }}
-        - --store-prefix={{ .Values.store.storePrefix }}
-{{- end }}
-{{- if .Values.backup.etcdQuotaBytes }}
-        - --embedded-etcd-quota-bytes={{ int $.Values.backup.etcdQuotaBytes }}
-{{- end }}
-{{- if .Values.etcd.enableTLS }}
-        - --cert=/var/etcd/ssl/client/tls.crt
-        - --key=/var/etcd/ssl/client/tls.key
-        - --cacert=/var/etcd/ssl/ca/ca.crt
-        - --insecure-transport=false
-        - --insecure-skip-tls-verify=false
-        - --endpoints=https://{{ .Values.name }}-local:{{ .Values.etcd.clientPort }}
-        # enable TLS on backup-restore server reusing etcd cert bundle
-        - --server-cert=/var/etcd/ssl/server/tls.crt
-        - --server-key=/var/etcd/ssl/server/tls.key
-{{ else }}
-        - --insecure-transport=true
-        - --insecure-skip-tls-verify=true
-        - --endpoints=http://{{ .Values.name }}-local:{{ .Values.etcd.clientPort }}
-{{- end }}
-        - --etcd-connection-timeout={{ .Values.backup.etcdConnectionTimeout }}
-{{- if .Values.backup.deltaSnapshotPeriod }}
-        - --delta-snapshot-period={{ .Values.backup.deltaSnapshotPeriod }}
-{{- end }}
-{{- if .Values.backup.deltaSnapshotMemoryLimit }}
-        - --delta-snapshot-memory-limit={{ int $.Values.backup.deltaSnapshotMemoryLimit }}
-{{- end }}
-# {{- if and .Values.etcd.username .Values.etcd.password }}
-#         - --etcd-username={{ .Values.etcd.username }}
-#         - --etcd-password={{ .Values.etcd.password }}
-# {{- end }}
-{{- if .Values.backup.garbageCollectionPeriod }}
-        - --garbage-collection-period={{ .Values.backup.garbageCollectionPeriod }}
-{{- end }}
-        - --snapstore-temp-directory={{ .Values.backup.snapstoreTempDir }}
+        - --config-file=/var/etcdbr/config/etcdbr.conf.yaml
         image: {{ .Values.backup.image }}
         imagePullPolicy: {{ .Values.backup.pullPolicy }}
         ports:
@@ -253,8 +204,8 @@ spec:
         volumeMounts:
         - name: {{ .Values.volumeClaimTemplateName }}
           mountPath: /var/etcd/data
-        - name: etcd-config-file
-          mountPath: /var/etcd/config/
+        - name: etcdbr-config-file
+          mountPath: /var/etcdbr/config/
 {{- if .Values.etcd.enableTLS }}
         - name: ca-etcd
           mountPath: /var/etcd/ssl/ca
@@ -282,6 +233,13 @@ spec:
           items:
           - key: etcd.conf.yaml
             path: etcd.conf.yaml
+      - name: etcdbr-config-file
+        configMap:
+          name: {{ .Values.configMapName }}
+          defaultMode: 0644
+          items:
+          - key: etcdbr.conf.yaml
+            path: etcdbr.conf.yaml
 {{- if .Values.etcd.enableTLS }}
       - name: etcd-server-tls
         secret:
