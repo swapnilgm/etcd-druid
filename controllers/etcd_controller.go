@@ -23,39 +23,37 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	errorsutil "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/client-go/util/retry"
-
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/yaml"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/gardener/etcd-druid/pkg/chartrenderer"
+	kubernetes "github.com/gardener/etcd-druid/pkg/client/kubernetes"
 	"github.com/gardener/etcd-druid/pkg/common"
 	druidpredicates "github.com/gardener/etcd-druid/pkg/predicate"
 	"github.com/gardener/etcd-druid/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-
-	kubernetes "github.com/gardener/etcd-druid/pkg/client/kubernetes"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	gardenerretry "github.com/gardener/gardener/pkg/utils/retry"
+
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	errorsutil "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 var (
@@ -138,7 +136,6 @@ func (r *EtcdReconciler) getImageYAMLPath() string {
 }
 
 // InitializeControllerWithChartApplier will use EtcdReconciler client to intialize a Kubernetes client as well as
-// InitializeControllerWithChartApplier will use EtcdReconciler client to intialize a Kubernetes client as well as
 // a Chart renderer.
 func (r *EtcdReconciler) InitializeControllerWithChartApplier() (*EtcdReconciler, error) {
 	if r.chartApplier != nil {
@@ -173,9 +170,9 @@ func (r *EtcdReconciler) InitializeControllerWithImageVector() (*EtcdReconciler,
 
 // Reconcile reconciles the etcd.
 func (r *EtcdReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-
+	ctx := context.TODO()
 	etcd := &druidv1alpha1.Etcd{}
-	if err := r.Get(context.TODO(), req.NamespacedName, etcd); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, etcd); err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
@@ -187,34 +184,12 @@ func (r *EtcdReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	logger.Infof("Reconciling etcd: %s/%s", etcd.GetNamespace(), etcd.GetName())
 	if !etcd.DeletionTimestamp.IsZero() {
-		logger.Infof("Deletion timestamp set for etcd: %s", etcd.GetName())
-		if err := r.removeFinalizersToDependantSecrets(etcd); err != nil {
-			if err := r.updateEtcdErrorStatus(etcd, nil, err); err != nil {
-				return ctrl.Result{
-					Requeue: true,
-				}, err
-			}
-			return ctrl.Result{
-				Requeue: true,
-			}, err
-		}
-
-		if sets.NewString(etcd.Finalizers...).Has(FinalizerName) {
-			logger.Infof("Removing finalizer (%s) from etcd %s", FinalizerName, etcd.GetName())
-			finalizers := sets.NewString(etcd.Finalizers...)
-			finalizers.Delete(FinalizerName)
-			etcd.Finalizers = finalizers.UnsortedList()
-			if err := r.Update(context.TODO(), etcd); err != nil && !errors.IsConflict(err) {
-				return ctrl.Result{
-					Requeue: true,
-				}, err
-			}
-
-		}
-		logger.Infof("Deleted etcd %s successfully.", etcd.GetName())
-		return ctrl.Result{}, nil
+		return r.delete(ctx, etcd)
 	}
+	return r.reconcile(ctx, etcd)
+}
 
+func (r *EtcdReconciler) reconcile(ctx context.Context, etcd *druidv1alpha1.Etcd) (ctrl.Result, error) {
 	// Add Finalizers to Etcd
 	if finalizers := sets.NewString(etcd.Finalizers...); !finalizers.Has(FinalizerName) {
 		logger.Infof("Adding finalizer (%s) to etcd %s", FinalizerName, etcd.GetName())
@@ -270,6 +245,34 @@ func (r *EtcdReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{
 		Requeue: false,
 	}, nil
+}
+
+func (r *EtcdReconciler) delete(ctx context.Context, etcd *druidv1alpha1.Etcd) (ctrl.Result, error) {
+	logger.Infof("Deletion timestamp set for etcd: %s", etcd.GetName())
+	if err := r.removeFinalizersToDependantSecrets(etcd); err != nil {
+		if err := r.updateEtcdErrorStatus(etcd, nil, err); err != nil {
+			return ctrl.Result{
+				Requeue: true,
+			}, err
+		}
+		return ctrl.Result{
+			Requeue: true,
+		}, err
+	}
+
+	if sets.NewString(etcd.Finalizers...).Has(FinalizerName) {
+		logger.Infof("Removing finalizer (%s) from etcd %s", FinalizerName, etcd.GetName())
+		finalizers := sets.NewString(etcd.Finalizers...)
+		finalizers.Delete(FinalizerName)
+		etcd.Finalizers = finalizers.UnsortedList()
+		if err := r.Update(ctx, etcd); err != nil && !errors.IsConflict(err) {
+			return ctrl.Result{
+				Requeue: true,
+			}, err
+		}
+	}
+	logger.Infof("Deleted etcd %s successfully.", etcd.GetName())
+	return ctrl.Result{}, nil
 }
 
 func (r *EtcdReconciler) reconcileServices(etcd *druidv1alpha1.Etcd, renderedChart *chartrenderer.RenderedChart) (*corev1.Service, error) {
@@ -717,7 +720,6 @@ func (r *EtcdReconciler) getStatefulSetFromEtcd(etcd *druidv1alpha1.Etcd, cm *co
 }
 
 func (r *EtcdReconciler) reconcileEtcd(etcd *druidv1alpha1.Etcd) (*corev1.Service, *appsv1.StatefulSet, error) {
-
 	values, err := r.getMapFromEtcd(etcd)
 	if err != nil {
 		return nil, nil, err
