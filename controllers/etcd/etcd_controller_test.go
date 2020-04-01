@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllers_test
+package etcd_test
 
 import (
 	"context"
@@ -194,6 +194,7 @@ func getEtcd(name, namespace string) *druidv1alpha1.Etcd {
 		},
 	}
 
+	repliaces := int32(1)
 	instance := &druidv1alpha1.Etcd{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -215,7 +216,7 @@ func getEtcd(name, namespace string) *druidv1alpha1.Etcd {
 					"instance": name,
 				},
 			},
-			Replicas:        1,
+			Replicas:        &repliaces,
 			StorageClass:    &storageClass,
 			StorageCapacity: &storageCapacity,
 

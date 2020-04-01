@@ -20,7 +20,7 @@ import (
 	"os"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	"github.com/gardener/etcd-druid/controllers"
+	"github.com/gardener/etcd-druid/controllers/etcd"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	schemev1 "k8s.io/client-go/kubernetes/scheme"
@@ -70,7 +70,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ec, err := controllers.NewEtcdReconcilerWithImageVector(mgr)
+	ec, err := etcd.NewEtcdReconcilerWithImageVector(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to initialize controller with image vector")
 		os.Exit(1)

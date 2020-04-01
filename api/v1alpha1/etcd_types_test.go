@@ -113,6 +113,7 @@ func getEtcd(name, namespace string) *Etcd {
 		},
 	}
 
+	replicas := int32(1)
 	instance := &Etcd{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -134,7 +135,7 @@ func getEtcd(name, namespace string) *Etcd {
 					"name": name,
 				},
 			},
-			Replicas:        1,
+			Replicas:        &replicas,
 			StorageClass:    &storageClass,
 			StorageCapacity: &storageCapacity,
 

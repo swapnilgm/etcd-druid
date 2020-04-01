@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     instance: {{ .Values.name }}
+    scope: internal
 {{- if .Values.labels }}
 {{ toYaml .Values.labels | indent 4 }}
 {{- end }}
@@ -25,11 +26,11 @@ spec:
 {{ toYaml .Values.labels | indent 4 }}
 {{- end }}
   ports:
-  - name: client
+  - name: etcd-client
     protocol: TCP
     port: {{ .Values.etcd.clientPort }}
     targetPort: {{ .Values.etcd.clientPort }}
-  - name: server
+  - name: etcd-server
     protocol: TCP
     port: {{ .Values.etcd.serverPort }}
     targetPort: {{ .Values.etcd.serverPort }}

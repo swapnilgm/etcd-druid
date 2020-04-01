@@ -56,7 +56,10 @@ data:
 
     start_managed_etcd(){
           rm -rf $VALIDATION_MARKER
-          etcd --config-file /var/etcd/config/etcd.conf.yaml &
+          etcd --config-file /var/etcd/config/etcd.conf.yaml \
+          --name=$HOSTNAME \
+          --initial-advertise-peer-urls http://$HOSTNAME.etcd-client:2380 \
+          --advertise-client-urls http://$HOSTNAME.etcd-client:2379 &
           ETCDPID=$!
           trap_and_propagate $ETCDPID INT TERM
           wait $ETCDPID
@@ -106,7 +109,7 @@ data:
     fi
   etcd.conf.yaml: |-
     # Human-readable name for this member.
-    name: etcd-{{ printf "%.6s" .Values.uid }}
+    #name: etcd-{{ printf "%.6s" .Values.uid }}
 
     # Path to the data directory.
     data-dir: /var/etcd/data/new.etcd
@@ -126,12 +129,32 @@ data:
     quota-backend-bytes: {{ int $.Values.backup.etcdQuotaBytes }}
     {{- end }}
 
+    # List of comma separated URLs to listen on for peer traffic.
+    listen-peer-urls: {{ if .Values.etcd.enableTLS }}https{{ else }}http{{ end }}://0.0.0.0:{{ .Values.etcd.serverPort }}
+
     # List of comma separated URLs to listen on for client traffic.
     listen-client-urls: {{ if .Values.etcd.enableTLS }}https{{ else }}http{{ end }}://0.0.0.0:{{ .Values.etcd.clientPort }}
 
+    # List of this member's peer URLs to advertise to the rest of the cluster.
+    # The URLs needed to be a comma-separated list.
+    #initial-advertise-peer-urls: http://localhost:2380
+
     # List of this member's client URLs to advertise to the public.
     # The URLs needed to be a comma-separated list.
-    advertise-client-urls: {{ if .Values.etcd.enableTLS }}https{{ else }}http{{ end }}://0.0.0.0:{{ .Values.etcd.clientPort }}
+    #advertise-client-urls: http://localhost:2379
+    #advertise-client-urls: {{ if .Values.etcd.enableTLS }}https{{ else }}http{{ end }}://0.0.0.0:{{ .Values.etcd.clientPort }}
+
+    # Discovery URL used to bootstrap the cluster.
+    #discovery:
+
+    # Valid values include 'exit', 'proxy'
+    #discovery-fallback: 'proxy'
+
+    # HTTP proxy to use for traffic to discovery service.
+    #discovery-proxy:
+
+    # DNS domain used to bootstrap initial cluster.
+    discovery-srv: etcd-client
 
     # Initial cluster token for the etcd cluster during bootstrap.
     initial-cluster-token: {{ .Values.etcd.initialClusterToken }}

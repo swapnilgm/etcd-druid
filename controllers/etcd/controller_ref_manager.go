@@ -20,7 +20,7 @@ Modifications Copyright (c) 2017 SAP SE or an SAP affiliate company. All rights 
 */
 
 // Package controllers is used to provide the core functionalities of hvpa-controller
-package controllers
+package etcd
 
 import (
 	"context"
@@ -137,7 +137,7 @@ func (m *BaseControllerRefManager) ClaimObject(obj metav1.Object, match func(met
 type EtcdDruidRefManager struct {
 	BaseControllerRefManager
 	controllerKind schema.GroupVersionKind
-	reconciler     *EtcdReconciler
+	reconciler     *Reconciler
 }
 
 // NewEtcdDruidRefManager returns a EtcdDruidRefManager that exposes
@@ -148,7 +148,7 @@ type EtcdDruidRefManager struct {
 // It will only be called (at most once) if an adoption is actually attempted.
 // If CanAdopt() returns a non-nil error, all adoptions will fail.
 func NewEtcdDruidRefManager(
-	reconciler *EtcdReconciler,
+	reconciler *Reconciler,
 	controller metav1.Object,
 	selector labels.Selector,
 	controllerKind schema.GroupVersionKind,
