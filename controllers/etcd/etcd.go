@@ -24,6 +24,12 @@ const (
 	defaultBackupPort     = 8080
 )
 
+func getCompletedEtcdNodes(etcd *druidv1alpha1.Etcd) int32 {
+	if etcd.Spec.Replicas != nil {
+		return *etcd.Spec.Replicas
+	}
+	return 0
+}
 func getCompletedEtcdServerPort(etcd *druidv1alpha1.Etcd) int {
 	if etcd.Spec.Etcd.ServerPort != nil {
 		return *etcd.Spec.Etcd.ServerPort

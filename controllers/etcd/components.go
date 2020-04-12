@@ -210,7 +210,6 @@ start_managed_etcd() {
 
 	// Path to the data directory.
 	sb.WriteString("    --data-dir=/var/etcd/data/new.etcd \\\n")
-
 	//metrics configuration
 	sb.WriteString(fmt.Sprintf("    --metrics=%s \\\n", etcd.Spec.Etcd.Metrics))
 
@@ -260,14 +259,19 @@ start_managed_etcd() {
 	// The URLs needed to be a comma-separated list.
 	sb.WriteString(fmt.Sprintf("    --advertise-client-urls=\"http%s://$MY_POD_IP:%d\" \\\n", appendS, getCompletedEtcdClientPort(etcd)))
 
+	nodes := getCompletedEtcdNodes(etcd)
+	initialCluster := ""
+	for i := int32(0); i < nodes; i++ {
+		initialCluster = fmt.Sprintf("%s,%s-%d=http://%s-%d.%s:%d", initialCluster, etcd.Name, i, etcd.Name, i, svc.Name, getCompletedEtcdServerPort(etcd))
+	}
 	// DNS domain used to bootstrap initial cluster.
-	sb.WriteString(fmt.Sprintf("    --discovery-srv=%s \\\n", svc.Name))
-
+	//sb.WriteString(fmt.Sprintf("    --discovery-srv=%s \\\n", svc.Name))
+	// Initial cluster configuration for bootstrapping.
+	sb.WriteString(fmt.Sprintf("    --initial-cluster=%s \\\n", initialCluster))
 	// List of this member's client URLs to advertise to the public.
 	// The URLs needed to be a comma-separated list.
 	// Initial cluster token for the etcd cluster during bootstrap.
 	sb.WriteString(fmt.Sprintf("    --initial-cluster-token=%s \\\n", etcd.Name))
-
 	// Initial cluster state ('new' or 'existing').
 	sb.WriteString("    --initial-cluster-state=new \\\n")
 	sb.WriteString("    --auto-compaction-mode=periodic \\\n")
@@ -476,7 +480,7 @@ func (r *Reconciler) getEtcdBRConf(etcd *druidv1alpha1.Etcd, svc *corev1.Service
 	}
 
 	sb.WriteString("\nrestorationConfig:\n")
-	sb.WriteString("  name: $(MY_POD_NAME)\n")
+	sb.WriteString("  name: default\n")
 	sb.WriteString(fmt.Sprintf("  initialCluster: \"default=http://localhost:%d\"\n", getCompletedEtcdServerPort(etcd)))
 	sb.WriteString(fmt.Sprintf("  initialClusterToken: %s\n", etcd.Name))
 	sb.WriteString("  restoreDataDir: /var/etcd/data/new.etcd\n")
@@ -534,8 +538,8 @@ func (r *Reconciler) getStatefulSetFromEtcd(ctx context.Context, etcd *druidv1al
 	}
 
 	var (
-		bootstrapDefaultMode    int32 = 356
-		etcdConfigDefaultMode   int32 = 0644
+		bootstrapDefaultMode int32 = 356
+		//etcdConfigDefaultMode   int32 = 0644
 		etcdbrConfigDefaultMode int32 = 0644
 	)
 	ss := &appsv1.StatefulSet{
@@ -572,21 +576,21 @@ func (r *Reconciler) getStatefulSetFromEtcd(ctx context.Context, etcd *druidv1al
 							},
 						},
 
-						{
-							Name: "etcd-config-file",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: v1.LocalObjectReference{Name: cm.Name},
-									DefaultMode:          &etcdConfigDefaultMode,
-									Items: []corev1.KeyToPath{
-										{
-											Key:  "etcd.conf.yaml",
-											Path: "etcd.conf.yaml",
-										},
-									},
-								},
-							},
-						},
+						// {
+						// 	Name: "etcd-config-file",
+						// 	VolumeSource: corev1.VolumeSource{
+						// 		ConfigMap: &corev1.ConfigMapVolumeSource{
+						// 			LocalObjectReference: v1.LocalObjectReference{Name: cm.Name},
+						// 			DefaultMode:          &etcdConfigDefaultMode,
+						// 			Items: []corev1.KeyToPath{
+						// 				{
+						// 					Key:  "etcd.conf.yaml",
+						// 					Path: "etcd.conf.yaml",
+						// 				},
+						// 			},
+						// 		},
+						// 	},
+						// },
 						{
 							Name: "etcdbr-config-file",
 							VolumeSource: corev1.VolumeSource{
@@ -693,10 +697,10 @@ func (r *Reconciler) getStatefulSetFromEtcd(ctx context.Context, etcd *druidv1al
 									Name:      "etcd-bootstrap-sh",
 									MountPath: "/var/etcd/bin/",
 								},
-								{
-									Name:      "etcd-config-file",
-									MountPath: "/var/etcd/config/",
-								},
+								// {
+								// 	Name:      "etcd-config-file",
+								// 	MountPath: "/var/etcd/config/",
+								// },
 								// {
 								// 	Name:      "ca-etcd",
 								// 	MountPath: "/var/etcd/ssl/ca",

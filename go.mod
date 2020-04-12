@@ -5,6 +5,7 @@ go 1.12
 require (
 	cloud.google.com/go v0.50.0 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/gardener/controller-manager-library v0.1.1-0.20191212112146-917449ad760c
 	github.com/gardener/gardener v1.1.2
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7 // indirect
