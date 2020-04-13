@@ -12,11 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcd
-
-import (
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-)
+package v1alpha1
 
 const (
 	defaultEtcdServerPort = 2380
@@ -24,27 +20,32 @@ const (
 	defaultBackupPort     = 8080
 )
 
-func getCompletedEtcdNodes(etcd *druidv1alpha1.Etcd) int32 {
+// GetCompletedEtcdNodes returns the completed value of number of etcd nodes.
+func (etcd *Etcd) GetCompletedEtcdNodes() int32 {
 	if etcd.Spec.Replicas != nil {
 		return *etcd.Spec.Replicas
 	}
 	return 0
 }
-func getCompletedEtcdServerPort(etcd *druidv1alpha1.Etcd) int {
+
+// GetCompletedEtcdServerPort returns the completed value of etcd server port.
+func (etcd *Etcd) GetCompletedEtcdServerPort() int {
 	if etcd.Spec.Etcd.ServerPort != nil {
 		return *etcd.Spec.Etcd.ServerPort
 	}
 	return defaultEtcdServerPort
 }
 
-func getCompletedEtcdClientPort(etcd *druidv1alpha1.Etcd) int {
+// GetCompletedEtcdClientPort returns the completed value of etcd client port.
+func (etcd *Etcd) GetCompletedEtcdClientPort() int {
 	if etcd.Spec.Etcd.ClientPort != nil {
 		return *etcd.Spec.Etcd.ClientPort
 	}
 	return defaultEtcdClientPort
 }
 
-func getCompletedBackupServerPort(etcd *druidv1alpha1.Etcd) int {
+// GetCompletedBackupServerPort returns the completed value of backup server port.
+func (etcd *Etcd) GetCompletedBackupServerPort() int {
 	if etcd.Spec.Backup.Port != nil {
 		return *etcd.Spec.Backup.Port
 	}

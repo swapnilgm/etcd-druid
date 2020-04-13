@@ -246,23 +246,23 @@ start_managed_etcd() {
 	//   auto-tls: false
 	//   `)
 	// }
-	sb.WriteString(fmt.Sprintf("    --listen-peer-urls=http%s://0.0.0.0:%d \\\n", appendS, getCompletedEtcdServerPort(etcd)))
+	sb.WriteString(fmt.Sprintf("    --listen-peer-urls=http%s://0.0.0.0:%d \\\n", appendS, etcd.GetCompletedEtcdServerPort()))
 
 	// List of comma separated URLs to listen on for client traffic.
-	sb.WriteString(fmt.Sprintf("    --listen-client-urls=http%s://0.0.0.0:%d \\\n", appendS, getCompletedEtcdClientPort(etcd)))
+	sb.WriteString(fmt.Sprintf("    --listen-client-urls=http%s://0.0.0.0:%d \\\n", appendS, etcd.GetCompletedEtcdClientPort()))
 
 	// List of this member's peer URLs to advertise to the rest of the cluster.
 	// The URLs needed to be a comma-separated list.
-	sb.WriteString(fmt.Sprintf("    --initial-advertise-peer-urls=\"http%s://$MY_POD_IP:%d\" \\\n", appendS, getCompletedEtcdServerPort(etcd)))
+	sb.WriteString(fmt.Sprintf("    --initial-advertise-peer-urls=\"http%s://$MY_POD_IP:%d\" \\\n", appendS, etcd.GetCompletedEtcdServerPort()))
 
 	// List of this member's client URLs to advertise to the public.
 	// The URLs needed to be a comma-separated list.
-	sb.WriteString(fmt.Sprintf("    --advertise-client-urls=\"http%s://$MY_POD_IP:%d\" \\\n", appendS, getCompletedEtcdClientPort(etcd)))
+	sb.WriteString(fmt.Sprintf("    --advertise-client-urls=\"http%s://$MY_POD_IP:%d\" \\\n", appendS, etcd.GetCompletedEtcdClientPort()))
 
-	nodes := getCompletedEtcdNodes(etcd)
+	nodes := etcd.GetCompletedEtcdNodes()
 	initialCluster := ""
 	for i := int32(0); i < nodes; i++ {
-		initialCluster = fmt.Sprintf("%s,%s-%d=http://%s-%d.%s:%d", initialCluster, etcd.Name, i, etcd.Name, i, svc.Name, getCompletedEtcdServerPort(etcd))
+		initialCluster = fmt.Sprintf("%s,%s-%d=http://%s-%d.%s:%d", initialCluster, etcd.Name, i, etcd.Name, i, svc.Name, etcd.GetCompletedEtcdServerPort())
 	}
 	// DNS domain used to bootstrap initial cluster.
 	//sb.WriteString(fmt.Sprintf("    --discovery-srv=%s \\\n", svc.Name))
@@ -297,7 +297,7 @@ check_and_start_etcd() {
 	} else {
 		sb.WriteString(`"http`)
 	}
-	sb.WriteString(fmt.Sprintf("://$MY_POD_NAME:%d/initialization/status\" -S -O status;\n", getCompletedBackupServerPort(etcd)))
+	sb.WriteString(fmt.Sprintf("://$MY_POD_NAME:%d/initialization/status\" -S -O status;\n", etcd.GetCompletedBackupServerPort()))
 	sb.WriteString("        STATUS=`cat status`;\n")
 	sb.WriteString(`        case $STATUS in
           "New")
@@ -307,7 +307,7 @@ check_and_start_etcd() {
 	} else {
 		sb.WriteString(`"http`)
 	}
-	sb.WriteString(fmt.Sprintf("://$MY_POD_NAME:%d/initialization/start?mode=$1\" -S -O - ;;", getCompletedBackupServerPort(etcd)))
+	sb.WriteString(fmt.Sprintf("://$MY_POD_NAME:%d/initialization/start?mode=$1\" -S -O - ;;", etcd.GetCompletedBackupServerPort()))
 	sb.WriteString(`
           "Progress")
             sleep 1;
@@ -388,10 +388,10 @@ func (r *Reconciler) getEtcdConf(etcd *druidv1alpha1.Etcd, svc *corev1.Service) 
 	  auto-tls: false
 	  `)
 	}
-	sb.WriteString(fmt.Sprintf("listen-peer-urls: http%s://0.0.0.0:%d\n", appendS, getCompletedEtcdServerPort(etcd)))
+	sb.WriteString(fmt.Sprintf("listen-peer-urls: http%s://0.0.0.0:%d\n", appendS, etcd.GetCompletedEtcdServerPort()))
 
 	// List of comma separated URLs to listen on for client traffic.
-	sb.WriteString(fmt.Sprintf("listen-client-urls: http%s://0.0.0.0:%d\n", appendS, getCompletedEtcdClientPort(etcd)))
+	sb.WriteString(fmt.Sprintf("listen-client-urls: http%s://0.0.0.0:%d\n", appendS, etcd.GetCompletedEtcdClientPort()))
 
 	// List of this member's peer URLs to advertise to the rest of the cluster.
 	// The URLs needed to be a comma-separated list.
@@ -434,11 +434,11 @@ func (r *Reconciler) getEtcdBRConf(etcd *druidv1alpha1.Etcd, svc *corev1.Service
 		`)
 	}
 	sb.WriteString("  endpoints:\n")
-	sb.WriteString(fmt.Sprintf("    - http%s://%s:%d\n", appendS, svc.Name, getCompletedEtcdClientPort(etcd)))
+	sb.WriteString(fmt.Sprintf("    - http%s://%s:%d\n", appendS, svc.Name, etcd.GetCompletedEtcdClientPort()))
 
 	sb.WriteString("  connectionTimeout: 5m\n")
 	sb.WriteString("\nserverConfig:\n")
-	sb.WriteString(fmt.Sprintf("  port: %d\n", getCompletedBackupServerPort(etcd)))
+	sb.WriteString(fmt.Sprintf("  port: %d\n", etcd.GetCompletedBackupServerPort()))
 	if etcd.Spec.Backup.TLS != nil {
 		sb.WriteString(`  server-cert: /var/etcd/ssl/server/tls.crt
     server-key: /var/etcd/ssl/server/tls.key`)
@@ -481,11 +481,11 @@ func (r *Reconciler) getEtcdBRConf(etcd *druidv1alpha1.Etcd, svc *corev1.Service
 
 	sb.WriteString("\nrestorationConfig:\n")
 	sb.WriteString("  name: default\n")
-	sb.WriteString(fmt.Sprintf("  initialCluster: \"default=http://localhost:%d\"\n", getCompletedEtcdServerPort(etcd)))
+	sb.WriteString(fmt.Sprintf("  initialCluster: \"default=http://localhost:%d\"\n", etcd.GetCompletedEtcdServerPort()))
 	sb.WriteString(fmt.Sprintf("  initialClusterToken: %s\n", etcd.Name))
 	sb.WriteString("  restoreDataDir: /var/etcd/data/new.etcd\n")
 	sb.WriteString("  initialAdvertisePeerURLs:\n")
-	sb.WriteString(fmt.Sprintf("    - \"http://localhost:%d\"\n", getCompletedEtcdServerPort(etcd)))
+	sb.WriteString(fmt.Sprintf("    - \"http://localhost:%d\"\n", etcd.GetCompletedEtcdServerPort()))
 
 	if etcd.Spec.Etcd.Quota != nil {
 		sb.WriteString(fmt.Sprintf("  embeddedEtcdQuotaBytes: %d\n", etcd.Spec.Etcd.Quota.Value()))
@@ -678,12 +678,12 @@ func (r *Reconciler) getStatefulSetFromEtcd(ctx context.Context, etcd *druidv1al
 							},
 							Ports: []corev1.ContainerPort{
 								{
-									ContainerPort: int32(getCompletedEtcdServerPort(etcd)),
+									ContainerPort: int32(etcd.GetCompletedEtcdServerPort()),
 									Name:          "etcd-server",
 									Protocol:      corev1.ProtocolTCP,
 								},
 								{
-									ContainerPort: int32(getCompletedEtcdClientPort(etcd)),
+									ContainerPort: int32(etcd.GetCompletedEtcdClientPort()),
 									Name:          "etcd-client",
 									Protocol:      corev1.ProtocolTCP,
 								},
@@ -745,7 +745,7 @@ func (r *Reconciler) getStatefulSetFromEtcd(ctx context.Context, etcd *druidv1al
 							Ports: []corev1.ContainerPort{
 								{
 
-									ContainerPort: int32(getCompletedBackupServerPort((etcd))),
+									ContainerPort: int32(etcd.GetCompletedBackupServerPort()),
 									Name:          "backup",
 									Protocol:      corev1.ProtocolTCP,
 								},
