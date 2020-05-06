@@ -1,4 +1,3 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -9,12 +8,12 @@ metadata:
   name: etcds.druid.gardener.cloud
 spec:
   additionalPrinterColumns:
-  - JSONPath: .status.ready
-    name: Ready
-    type: string
-  - JSONPath: .metadata.creationTimestamp
-    name: Age
-    type: date
+    - JSONPath: .status.ready
+      name: Ready
+      type: string
+    - JSONPath: .metadata.creationTimestamp
+      name: Age
+      type: date
   group: druid.gardener.cloud
   names:
     kind: Etcd
@@ -33,14 +32,16 @@ spec:
       description: Etcd is the Schema for the etcds API
       properties:
         apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
+          description:
+            "APIVersion defines the versioned schema of this representation
             of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources"
           type: string
         kind:
-          description: 'Kind is a string value representing the REST resource this
+          description:
+            "Kind is a string value representing the REST resource this
             object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"
           type: string
         metadata:
           type: object
@@ -52,60 +53,71 @@ spec:
                 type: string
               type: object
             backup:
-              description: BackupSpec defines parametes associated with the full and
+              description:
+                BackupSpec defines parametes associated with the full and
                 delta snapshots of etcd
               properties:
                 deltaSnapshotMemoryLimit:
-                  description: DeltaSnapshotMemoryLimit defines the memory limit after
+                  description:
+                    DeltaSnapshotMemoryLimit defines the memory limit after
                     which delta snapshots will be taken
                   type: string
                 deltaSnapshotPeriod:
-                  description: DeltaSnapshotPeriod defines the period after which
+                  description:
+                    DeltaSnapshotPeriod defines the period after which
                     delta snapshots will be taken
                   type: string
                 fullSnapshotSchedule:
-                  description: FullSnapshotSchedule defines the cron standard schedule
+                  description:
+                    FullSnapshotSchedule defines the cron standard schedule
                     for full snapshots.
                   type: string
                 garbageCollectionPeriod:
-                  description: GarbageCollectionPeriod defines the period for garbage
+                  description:
+                    GarbageCollectionPeriod defines the period for garbage
                     collecting old backups
                   type: string
                 garbageCollectionPolicy:
-                  description: GarbageCollectionPolicy defines the policy for garbage
+                  description:
+                    GarbageCollectionPolicy defines the policy for garbage
                     collecting old backups
                   enum:
-                  - Exponential
-                  - LimitBased
+                    - Exponential
+                    - LimitBased
                   type: string
                 image:
                   description: Image defines the etcd container image and tag
                   type: string
                 port:
-                  description: Port define the port on which etcd-backup-restore server
+                  description:
+                    Port define the port on which etcd-backup-restore server
                     will exposed.
                   type: integer
                 resources:
-                  description: 'Resources defines the compute Resources required by
-                    backup-restore container. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                  description:
+                    "Resources defines the compute Resources required by
+                    backup-restore container. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/"
                   properties:
                     limits:
                       additionalProperties:
                         type: string
-                      description: 'Limits describes the maximum amount of compute
-                        resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                      description:
+                        "Limits describes the maximum amount of compute
+                        resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/"
                       type: object
                     requests:
                       additionalProperties:
                         type: string
-                      description: 'Requests describes the minimum amount of compute
+                      description:
+                        "Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise
-                        to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                        to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/"
                       type: object
                   type: object
                 store:
-                  description: Store defines the specification of object store provider
+                  description:
+                    Store defines the specification of object store provider
                     for storing backups.
                   properties:
                     container:
@@ -113,125 +125,146 @@ spec:
                     prefix:
                       type: string
                     provider:
-                      description: StorageProvider defines the type of object store
+                      description:
+                        StorageProvider defines the type of object store
                         provider for storing backups.
                       type: string
                     secretRef:
-                      description: SecretReference represents a Secret Reference.
+                      description:
+                        SecretReference represents a Secret Reference.
                         It has enough information to retrieve secret in any namespace
                       properties:
                         name:
-                          description: Name is unique within a namespace to reference
+                          description:
+                            Name is unique within a namespace to reference
                             a secret resource.
                           type: string
                         namespace:
-                          description: Namespace defines the space within which the
+                          description:
+                            Namespace defines the space within which the
                             secret name must be unique.
                           type: string
                       type: object
                   required:
-                  - prefix
+                    - prefix
                   type: object
                 tls:
                   description: TLSConfig hold the TLS configuration details.
                   properties:
                     clientTLSSecretRef:
-                      description: SecretReference represents a Secret Reference.
+                      description:
+                        SecretReference represents a Secret Reference.
                         It has enough information to retrieve secret in any namespace
                       properties:
                         name:
-                          description: Name is unique within a namespace to reference
+                          description:
+                            Name is unique within a namespace to reference
                             a secret resource.
                           type: string
                         namespace:
-                          description: Namespace defines the space within which the
+                          description:
+                            Namespace defines the space within which the
                             secret name must be unique.
                           type: string
                       type: object
                     serverTLSSecretRef:
-                      description: SecretReference represents a Secret Reference.
+                      description:
+                        SecretReference represents a Secret Reference.
                         It has enough information to retrieve secret in any namespace
                       properties:
                         name:
-                          description: Name is unique within a namespace to reference
+                          description:
+                            Name is unique within a namespace to reference
                             a secret resource.
                           type: string
                         namespace:
-                          description: Namespace defines the space within which the
+                          description:
+                            Namespace defines the space within which the
                             secret name must be unique.
                           type: string
                       type: object
                     tlsCASecretRef:
-                      description: SecretReference represents a Secret Reference.
+                      description:
+                        SecretReference represents a Secret Reference.
                         It has enough information to retrieve secret in any namespace
                       properties:
                         name:
-                          description: Name is unique within a namespace to reference
+                          description:
+                            Name is unique within a namespace to reference
                             a secret resource.
                           type: string
                         namespace:
-                          description: Namespace defines the space within which the
+                          description:
+                            Namespace defines the space within which the
                             secret name must be unique.
                           type: string
                       type: object
                   required:
-                  - clientTLSSecretRef
-                  - serverTLSSecretRef
-                  - tlsCASecretRef
+                    - clientTLSSecretRef
+                    - serverTLSSecretRef
+                    - tlsCASecretRef
                   type: object
               type: object
             etcd:
               description: EtcdConfig defines parametes associated etcd deployed
               properties:
                 authSecretRef:
-                  description: SecretReference represents a Secret Reference. It has
+                  description:
+                    SecretReference represents a Secret Reference. It has
                     enough information to retrieve secret in any namespace
                   properties:
                     name:
-                      description: Name is unique within a namespace to reference
+                      description:
+                        Name is unique within a namespace to reference
                         a secret resource.
                       type: string
                     namespace:
-                      description: Namespace defines the space within which the secret
+                      description:
+                        Namespace defines the space within which the secret
                         name must be unique.
                       type: string
                   type: object
                 clientPort:
                   type: integer
                 defragmentationSchedule:
-                  description: DefragmentationSchedule defines the cron standard schedule
+                  description:
+                    DefragmentationSchedule defines the cron standard schedule
                     for defragmentation of etcd.
                   type: string
                 image:
                   description: Image defines the etcd container image and tag
                   type: string
                 metrics:
-                  description: Metrics defines the level of detail for exported metrics
+                  description:
+                    Metrics defines the level of detail for exported metrics
                     of etcd, specify 'extensive' to include histogram metrics.
                   enum:
-                  - basic
-                  - extensive
+                    - basic
+                    - extensive
                   type: string
                 quota:
                   description: Quota defines the etcd DB quota.
                   type: string
                 resources:
-                  description: 'Resources defines the compute Resources required by
-                    etcd container. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                  description:
+                    "Resources defines the compute Resources required by
+                    etcd container. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/"
                   properties:
                     limits:
                       additionalProperties:
                         type: string
-                      description: 'Limits describes the maximum amount of compute
-                        resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                      description:
+                        "Limits describes the maximum amount of compute
+                        resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/"
                       type: object
                     requests:
                       additionalProperties:
                         type: string
-                      description: 'Requests describes the minimum amount of compute
+                      description:
+                        "Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise
-                        to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                        to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/"
                       type: object
                   type: object
                 serverPort:
@@ -240,48 +273,57 @@ spec:
                   description: TLSConfig hold the TLS configuration details.
                   properties:
                     clientTLSSecretRef:
-                      description: SecretReference represents a Secret Reference.
+                      description:
+                        SecretReference represents a Secret Reference.
                         It has enough information to retrieve secret in any namespace
                       properties:
                         name:
-                          description: Name is unique within a namespace to reference
+                          description:
+                            Name is unique within a namespace to reference
                             a secret resource.
                           type: string
                         namespace:
-                          description: Namespace defines the space within which the
+                          description:
+                            Namespace defines the space within which the
                             secret name must be unique.
                           type: string
                       type: object
                     serverTLSSecretRef:
-                      description: SecretReference represents a Secret Reference.
+                      description:
+                        SecretReference represents a Secret Reference.
                         It has enough information to retrieve secret in any namespace
                       properties:
                         name:
-                          description: Name is unique within a namespace to reference
+                          description:
+                            Name is unique within a namespace to reference
                             a secret resource.
                           type: string
                         namespace:
-                          description: Namespace defines the space within which the
+                          description:
+                            Namespace defines the space within which the
                             secret name must be unique.
                           type: string
                       type: object
                     tlsCASecretRef:
-                      description: SecretReference represents a Secret Reference.
+                      description:
+                        SecretReference represents a Secret Reference.
                         It has enough information to retrieve secret in any namespace
                       properties:
                         name:
-                          description: Name is unique within a namespace to reference
+                          description:
+                            Name is unique within a namespace to reference
                             a secret resource.
                           type: string
                         namespace:
-                          description: Namespace defines the space within which the
+                          description:
+                            Namespace defines the space within which the
                             secret name must be unique.
                           type: string
                       type: object
                   required:
-                  - clientTLSSecretRef
-                  - serverTLSSecretRef
-                  - tlsCASecretRef
+                    - clientTLSSecretRef
+                    - serverTLSSecretRef
+                    - tlsCASecretRef
                   type: object
               type: object
             labels:
@@ -289,35 +331,42 @@ spec:
                 type: string
               type: object
             priorityClassName:
-              description: PriorityClassName is the name of a priority class that
+              description:
+                PriorityClassName is the name of a priority class that
                 shall be used for the etcd pods.
               type: string
             replicas:
               format: int32
               type: integer
             selector:
-              description: 'selector is a label query over pods that should match
-                the replica count. It must match the pod template''s labels. More
-                info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors'
+              description:
+                "selector is a label query over pods that should match
+                the replica count. It must match the pod template's labels. More
+                info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors"
               properties:
                 matchExpressions:
-                  description: matchExpressions is a list of label selector requirements.
+                  description:
+                    matchExpressions is a list of label selector requirements.
                     The requirements are ANDed.
                   items:
-                    description: A label selector requirement is a selector that contains
+                    description:
+                      A label selector requirement is a selector that contains
                       values, a key, and an operator that relates the key and values.
                     properties:
                       key:
-                        description: key is the label key that the selector applies
+                        description:
+                          key is the label key that the selector applies
                           to.
                         type: string
                       operator:
-                        description: operator represents a key's relationship to a
+                        description:
+                          operator represents a key's relationship to a
                           set of values. Valid operators are In, NotIn, Exists and
                           DoesNotExist.
                         type: string
                       values:
-                        description: values is an array of string values. If the operator
+                        description:
+                          values is an array of string values. If the operator
                           is In or NotIn, the values array must be non-empty. If the
                           operator is Exists or DoesNotExist, the values array must
                           be empty. This array is replaced during a strategic merge
@@ -326,14 +375,15 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
                   additionalProperties:
                     type: string
-                  description: matchLabels is a map of {key,value} pairs. A single
+                  description:
+                    matchLabels is a map of {key,value} pairs. A single
                     {key,value} in the matchLabels map is equivalent to an element
                     of matchExpressions, whose key field is "key", the operator is
                     "In", and the values array contains only "value". The requirements
@@ -344,28 +394,34 @@ spec:
               description: StorageCapacity defines the size of persistent volume.
               type: string
             storageClass:
-              description: 'StorageClass defines the name of the StorageClass required
-                by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
+              description:
+                "StorageClass defines the name of the StorageClass required
+                by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1"
               type: string
             volumeClaimTemplate:
-              description: VolumeClaimTemplate defines the volume claim template to
+              description:
+                VolumeClaimTemplate defines the volume claim template to
                 be created
               type: string
           required:
-          - backup
-          - etcd
-          - selector
+            - backup
+            - etcd
+            - labels
+            - replicas
+            - selector
           type: object
         status:
           description: EtcdStatus defines the observed state of Etcd
           properties:
             conditions:
               items:
-                description: Condition holds the information about the state of a
+                description:
+                  Condition holds the information about the state of a
                   resource.
                 properties:
                   lastTransitionTime:
-                    description: Last time the condition transitioned from one status
+                    description:
+                      Last time the condition transitioned from one status
                       to another.
                     format: date-time
                     type: string
@@ -374,7 +430,8 @@ spec:
                     format: date-time
                     type: string
                   message:
-                    description: A human readable message indicating details about
+                    description:
+                      A human readable message indicating details about
                       the transition.
                     type: string
                   reason:
@@ -392,7 +449,8 @@ spec:
               format: int32
               type: integer
             etcd:
-              description: CrossVersionObjectReference contains enough information
+              description:
+                CrossVersionObjectReference contains enough information
                 to let you identify the referred resource.
               properties:
                 apiVersion:
@@ -406,27 +464,33 @@ spec:
                   type: string
               type: object
             labelSelector:
-              description: selector is a label query over pods that should match the
+              description:
+                selector is a label query over pods that should match the
                 replica count. It must match the pod template's labels.
               properties:
                 matchExpressions:
-                  description: matchExpressions is a list of label selector requirements.
+                  description:
+                    matchExpressions is a list of label selector requirements.
                     The requirements are ANDed.
                   items:
-                    description: A label selector requirement is a selector that contains
+                    description:
+                      A label selector requirement is a selector that contains
                       values, a key, and an operator that relates the key and values.
                     properties:
                       key:
-                        description: key is the label key that the selector applies
+                        description:
+                          key is the label key that the selector applies
                           to.
                         type: string
                       operator:
-                        description: operator represents a key's relationship to a
+                        description:
+                          operator represents a key's relationship to a
                           set of values. Valid operators are In, NotIn, Exists and
                           DoesNotExist.
                         type: string
                       values:
-                        description: values is an array of string values. If the operator
+                        description:
+                          values is an array of string values. If the operator
                           is In or NotIn, the values array must be non-empty. If the
                           operator is Exists or DoesNotExist, the values array must
                           be empty. This array is replaced during a strategic merge
@@ -435,14 +499,15 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
                   additionalProperties:
                     type: string
-                  description: matchLabels is a map of {key,value} pairs. A single
+                  description:
+                    matchLabels is a map of {key,value} pairs. A single
                     {key,value} in the matchLabels map is equivalent to an element
                     of matchExpressions, whose key field is "key", the operator is
                     "In", and the values array contains only "value". The requirements
@@ -452,7 +517,8 @@ spec:
             lastError:
               type: string
             observedGeneration:
-              description: ObservedGeneration is the most recent generation observed
+              description:
+                ObservedGeneration is the most recent generation observed
                 for this resource.
               format: int64
               type: integer
@@ -473,9 +539,9 @@ spec:
       type: object
   version: v1alpha1
   versions:
-  - name: v1alpha1
-    served: true
-    storage: true
+    - name: v1alpha1
+      served: true
+      storage: true
 status:
   acceptedNames:
     kind: ""
