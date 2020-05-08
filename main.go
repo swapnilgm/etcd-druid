@@ -75,8 +75,8 @@ func main() {
 		setupLog.Error(err, "unable to initialize controller with image vector")
 		os.Exit(1)
 	}
-	err = ec.SetupWithManager(mgr, workers, ignoreOperationAnnotation)
-	if err != nil {
+
+	if err := ec.SetupWithManager(mgr, workers, ignoreOperationAnnotation); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Etcd")
 		os.Exit(1)
 	}

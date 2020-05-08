@@ -3,7 +3,6 @@ uid: uuid-of-etcd-resource
 serviceName: test
 configMapName: test
 
-replicas: 1
 #priorityClassName: foo
 
 tlsServerSecret: etcd-server-tls
@@ -13,8 +12,7 @@ annotations: {}
 labels: {}
 
 etcd:
-  initialClusterToken: initial
-  initialClusterState: new
+  nodes: 1
   enableTLS: false
   pullPolicy: IfNotPresent
   metrics: basic
@@ -27,14 +25,13 @@ etcd:
     requests:
       cpu: 50m
       memory: 128Mi
+  quota: 8000000000
   #username: username
   #password: password
 
 backup:
   pullPolicy: IfNotPresent
-  snapstoreTempDir: "/var/etcd/data/temp"
   etcdConnectionTimeout: 5m
-  etcdQuotaBytes: 8Gi
   garbageCollectionPolicy: LimitBased
   maxBackups: 7
   resources:

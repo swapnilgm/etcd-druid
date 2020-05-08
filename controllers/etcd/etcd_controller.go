@@ -22,31 +22,19 @@ import (
 	"strings"
 	"time"
 
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
-	"github.com/sirupsen/logrus"
-
-=======
->>>>>>> master:controllers/etcd_controller.go
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/gardener/etcd-druid/pkg/chartrenderer"
 	kubernetes "github.com/gardener/etcd-druid/pkg/client/kubernetes"
 	"github.com/gardener/etcd-druid/pkg/common"
 	druidpredicates "github.com/gardener/etcd-druid/pkg/predicate"
 	"github.com/gardener/etcd-druid/pkg/utils"
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
-=======
-
->>>>>>> master:controllers/etcd_controller.go
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	gardenerretry "github.com/gardener/gardener/pkg/utils/retry"
 
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
-=======
 	"github.com/sirupsen/logrus"
 
->>>>>>> master:controllers/etcd_controller.go
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -58,16 +46,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	errorsutil "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
-=======
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
->>>>>>> master:controllers/etcd_controller.go
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
@@ -131,7 +114,7 @@ func NewEtcdReconcilerWithImageVector(mgr manager.Manager) (*Reconciler, error) 
 }
 
 func getChartPath() string {
-	return filepath.Join("charts", "etcd")
+	return filepath.Join(common.ChartPath, "etcd")
 }
 
 func getChartPathForStatefulSet() string {
@@ -147,17 +130,10 @@ func getChartPathForService() string {
 }
 
 func getImageYAMLPath() string {
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
-	return filepath.Join("charts", "images.yaml")
-}
-
-// InitializeControllerWithChartApplier will use Reconciler client to initialize a Kubernetes client as well as
-=======
 	return filepath.Join(common.ChartPath, DefaultImageVector)
 }
 
 // InitializeControllerWithChartApplier will use EtcdReconciler client to initialize a Kubernetes client as well as
->>>>>>> master:controllers/etcd_controller.go
 // a Chart renderer.
 func (r *Reconciler) InitializeControllerWithChartApplier() (*Reconciler, error) {
 	if r.chartApplier != nil {
@@ -176,17 +152,10 @@ func (r *Reconciler) InitializeControllerWithChartApplier() (*Reconciler, error)
 	return r, nil
 }
 
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
-// InitializeControllerWithImageVector will use Reconciler client to initialize image vector for etcd
-// and backup restore images.
-func (r *Reconciler) InitializeControllerWithImageVector() (*Reconciler, error) {
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(common.ChartPath, DefaultImageVector))
-=======
 // InitializeControllerWithImageVector will use EtcdReconciler client to initialize image vector for etcd
 // and backup restore images.
-func (r *EtcdReconciler) InitializeControllerWithImageVector() (*EtcdReconciler, error) {
+func (r *Reconciler) InitializeControllerWithImageVector() (*Reconciler, error) {
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(getImageYAMLPath())
->>>>>>> master:controllers/etcd_controller.go
 	if err != nil {
 		return nil, err
 	}
@@ -198,11 +167,7 @@ func (r *EtcdReconciler) InitializeControllerWithImageVector() (*EtcdReconciler,
 // +kubebuilder:rbac:groups=druid.gardener.cloud,resources=etcds/status,verbs=get;update;patch
 
 // Reconcile reconciles the etcd.
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
 func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-=======
-func (r *EtcdReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
->>>>>>> master:controllers/etcd_controller.go
 	ctx := context.TODO()
 	etcd := &druidv1alpha1.Etcd{}
 	if err := r.Get(ctx, req.NamespacedName, etcd); err != nil {
@@ -222,11 +187,7 @@ func (r *EtcdReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return r.reconcile(ctx, etcd)
 }
 
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
 func (r *Reconciler) reconcile(ctx context.Context, etcd *druidv1alpha1.Etcd) (ctrl.Result, error) {
-=======
-func (r *EtcdReconciler) reconcile(ctx context.Context, etcd *druidv1alpha1.Etcd) (ctrl.Result, error) {
->>>>>>> master:controllers/etcd_controller.go
 	// Add Finalizers to Etcd
 	if finalizers := sets.NewString(etcd.Finalizers...); !finalizers.Has(FinalizerName) {
 		logger.Infof("Adding finalizer (%s) to etcd %s", FinalizerName, etcd.GetName())
@@ -278,86 +239,11 @@ func (r *EtcdReconciler) reconcile(ctx context.Context, etcd *druidv1alpha1.Etcd
 			Requeue: true,
 		}, err
 	}
-	logger.Infof("!@#$%Reconciled etcd: %s/%s", etcd.GetNamespace(), etcd.GetName())
+	logger.Infof("Successfully reconciled etcd: %s/%s", etcd.GetNamespace(), etcd.GetName())
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) delete(ctx context.Context, etcd *druidv1alpha1.Etcd) (ctrl.Result, error) {
-	logger.Infof("Deletion timestamp set for etcd: %s", etcd.GetName())
-	if err := r.removeFinalizersToDependantSecrets(etcd); err != nil {
-		if err := r.updateEtcdErrorStatus(etcd, nil, err); err != nil {
-			return ctrl.Result{
-				Requeue: true,
-			}, err
-		}
-		return ctrl.Result{
-			Requeue: true,
-		}, err
-	}
-
-	if sets.NewString(etcd.Finalizers...).Has(FinalizerName) {
-		logger.Infof("Removing finalizer (%s) from etcd %s", FinalizerName, etcd.GetName())
-		finalizers := sets.NewString(etcd.Finalizers...)
-		finalizers.Delete(FinalizerName)
-		etcd.Finalizers = finalizers.UnsortedList()
-		if err := r.Update(ctx, etcd); err != nil && !errors.IsConflict(err) {
-			return ctrl.Result{
-				Requeue: true,
-			}, err
-		}
-	}
-	logger.Infof("Deleted etcd %s successfully.", etcd.GetName())
-	return ctrl.Result{}, nil
-}
-
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
 func (r *Reconciler) reconcileInternalServices(ctx context.Context, etcd *druidv1alpha1.Etcd) (*corev1.Service, error) {
-=======
-func (r *EtcdReconciler) delete(ctx context.Context, etcd *druidv1alpha1.Etcd) (ctrl.Result, error) {
-	logger.Infof("Deletion timestamp set for etcd: %s", etcd.GetName())
-
-	if err := r.removeDependantStatefulset(ctx, etcd); err != nil {
-		if err := r.updateEtcdErrorStatus(etcd, nil, err); err != nil {
-			return ctrl.Result{
-				Requeue: true,
-			}, err
-		}
-		return ctrl.Result{
-			Requeue: true,
-		}, err
-	}
-
-	if err := r.removeFinalizersToDependantSecrets(ctx, etcd); err != nil {
-		if err := r.updateEtcdErrorStatus(etcd, nil, err); err != nil {
-			return ctrl.Result{
-				Requeue: true,
-			}, err
-		}
-		return ctrl.Result{
-			Requeue: true,
-		}, err
-	}
-
-	if sets.NewString(etcd.Finalizers...).Has(FinalizerName) {
-		logger.Infof("Removing finalizer (%s) from etcd %s", FinalizerName, etcd.GetName())
-		// Deep copy of etcd resource required here to patch the object. Update call results in
-		// StorageError. See also: https://github.com/kubernetes/kubernetes/issues/71139
-		etcdCopy := etcd.DeepCopy()
-		finalizers := sets.NewString(etcdCopy.Finalizers...)
-		finalizers.Delete(FinalizerName)
-		etcdCopy.Finalizers = finalizers.UnsortedList()
-		if err := r.Patch(ctx, etcdCopy, client.MergeFrom(etcd)); client.IgnoreNotFound(err) != nil {
-			return ctrl.Result{
-				Requeue: true,
-			}, err
-		}
-	}
-	logger.Infof("Deleted etcd %s successfully.", etcd.GetName())
-	return ctrl.Result{}, nil
-}
-
-func (r *EtcdReconciler) reconcileServices(etcd *druidv1alpha1.Etcd, renderedChart *chartrenderer.RenderedChart) (*corev1.Service, error) {
->>>>>>> master:controllers/etcd_controller.go
 	logger.Infof("Reconciling etcd services for etcd:%s in namespace:%s", etcd.Name, etcd.Namespace)
 
 	selector, err := metav1.LabelSelectorAsSelector(etcd.Spec.Selector)
@@ -544,7 +430,7 @@ func (r *Reconciler) reconcileConfigMaps(ctx context.Context, etcd *druidv1alpha
 	cms := &corev1.ConfigMapList{}
 	err = r.List(ctx, cms, client.InNamespace(etcd.Namespace), client.MatchingLabelsSelector{Selector: selector})
 	if err != nil {
-		logger.Errorf("Error listing conofgimaps: %v", err)
+		logger.Errorf("Error listing configmaps: %v", err)
 		return nil, err
 	}
 
@@ -697,19 +583,7 @@ func (r *Reconciler) reconcileStatefulSet(ctx context.Context, cm *corev1.Config
 		return nil, err
 	}
 
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
 	if err := r.Create(ctx, ss); err != nil {
-=======
-	err = r.Create(context.TODO(), ss)
-
-	// Ignore the precondition violated error, this machine is already updated
-	// with the desired label.
-	if err == errorsutil.ErrPreconditionViolated {
-		logger.Infof("Statefulset %s precondition doesn't hold, skip updating it.", ss.Name)
-		err = nil
-	}
-	if err != nil {
->>>>>>> master:controllers/etcd_controller.go
 		return nil, err
 	}
 
@@ -790,43 +664,15 @@ func (r *Reconciler) recreateStatefulset(ss *appsv1.StatefulSet) error {
 	return err
 }
 
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
 func (r *Reconciler) reconcileEtcd(ctx context.Context, etcd *druidv1alpha1.Etcd) (*corev1.Service, *appsv1.StatefulSet, error) {
-=======
-func (r *EtcdReconciler) getStatefulSetFromEtcd(etcd *druidv1alpha1.Etcd, cm *corev1.ConfigMap, svc *corev1.Service, values map[string]interface{}) (*appsv1.StatefulSet, error) {
-	var err error
-	decoded := &appsv1.StatefulSet{}
-	statefulSetPath := getChartPathForStatefulSet()
-	chartPath := getChartPath()
-	renderedChart, err := r.chartApplier.Render(chartPath, etcd.Name, etcd.Namespace, values)
-	if err != nil {
-		return nil, err
-	}
-	if _, ok := renderedChart.Files()[statefulSetPath]; !ok {
-		return nil, fmt.Errorf("missing configmap template file in the charts: %v", statefulSetPath)
-	}
-
-	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(renderedChart.Files()[statefulSetPath])), 1024)
-	if err = decoder.Decode(&decoded); err != nil {
-		return nil, err
-	}
-	return decoded, nil
-}
-
-func (r *EtcdReconciler) reconcileEtcd(etcd *druidv1alpha1.Etcd) (*corev1.Service, *appsv1.StatefulSet, error) {
-
->>>>>>> master:controllers/etcd_controller.go
 	values, err := r.getMapFromEtcd(etcd)
 	if err != nil {
 		return nil, nil, err
 	}
 
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
 	svc, err := r.reconcileInternalServices(ctx, etcd)
-=======
-	chartPath := getChartPath()
-	renderedChart, err := r.chartApplier.Render(chartPath, etcd.Name, etcd.Namespace, values)
->>>>>>> master:controllers/etcd_controller.go
+	// chartPath := getChartPath()
+	// renderedChart, err := r.chartApplier.Render(chartPath, etcd.Name, etcd.Namespace, values)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -864,9 +710,6 @@ func checkEtcdOwnerReference(refs []metav1.OwnerReference, etcd *druidv1alpha1.E
 	return false
 }
 
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
-func (r *Reconciler) getMapFromEtcd(etcd *druidv1alpha1.Etcd) (map[string]interface{}, error) {
-=======
 func checkEtcdAnnotations(annotations map[string]string, etcd metav1.Object) bool {
 	var (
 		ownedBy, ownerType string
@@ -883,11 +726,9 @@ func checkEtcdAnnotations(annotations map[string]string, etcd metav1.Object) boo
 	}
 	return ownedBy == fmt.Sprintf("%s/%s", etcd.GetNamespace(), etcd.GetName()) &&
 		ownerType == strings.ToLower(etcdGVK.Kind)
-
 }
 
-func (r *EtcdReconciler) getMapFromEtcd(etcd *druidv1alpha1.Etcd) (map[string]interface{}, error) {
->>>>>>> master:controllers/etcd_controller.go
+func (r *Reconciler) getMapFromEtcd(etcd *druidv1alpha1.Etcd) (map[string]interface{}, error) {
 	var (
 		images map[string]*imagevector.Image
 		err    error
@@ -987,9 +828,6 @@ func (r *EtcdReconciler) getMapFromEtcd(etcd *druidv1alpha1.Etcd) (map[string]in
 		"serviceName":             fmt.Sprintf("%s-client", etcd.Name),
 		"configMapName":           fmt.Sprintf("etcd-bootstrap-%s", string(etcd.UID[:6])),
 		"volumeClaimTemplateName": volumeClaimTemplateName,
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
-		"selector":                etcd.Spec.Selector,
-=======
 	}
 
 	if etcd.Spec.StorageCapacity != nil {
@@ -998,7 +836,6 @@ func (r *EtcdReconciler) getMapFromEtcd(etcd *druidv1alpha1.Etcd) (map[string]in
 
 	if etcd.Spec.StorageClass != nil {
 		values["storageClass"] = etcd.Spec.StorageClass
->>>>>>> master:controllers/etcd_controller.go
 	}
 
 	if etcd.Spec.PriorityClassName != nil {
@@ -1031,11 +868,7 @@ func (r *EtcdReconciler) getMapFromEtcd(etcd *druidv1alpha1.Etcd) (map[string]in
 	return values, nil
 }
 
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
-func (r *Reconciler) addFinalizersToDependantSecrets(etcd *druidv1alpha1.Etcd) error {
-=======
-func (r *EtcdReconciler) addFinalizersToDependantSecrets(ctx context.Context, etcd *druidv1alpha1.Etcd) error {
->>>>>>> master:controllers/etcd_controller.go
+func (r *Reconciler) addFinalizersToDependantSecrets(ctx context.Context, etcd *druidv1alpha1.Etcd) error {
 
 	secrets := []*corev1.SecretReference{}
 	if etcd.Spec.Etcd.TLS != nil {
@@ -1071,83 +904,7 @@ func (r *EtcdReconciler) addFinalizersToDependantSecrets(ctx context.Context, et
 	return nil
 }
 
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
-func (r *Reconciler) removeFinalizersToDependantSecrets(etcd *druidv1alpha1.Etcd) error {
-
-	secrets := []string{}
-=======
-func (r *EtcdReconciler) removeFinalizersToDependantSecrets(ctx context.Context, etcd *druidv1alpha1.Etcd) error {
-	secrets := []*corev1.SecretReference{}
->>>>>>> master:controllers/etcd_controller.go
-	if etcd.Spec.Etcd.TLS != nil {
-		secrets = append(secrets,
-			&etcd.Spec.Etcd.TLS.ClientTLSSecretRef,
-			&etcd.Spec.Etcd.TLS.ServerTLSSecretRef,
-			&etcd.Spec.Etcd.TLS.TLSCASecretRef,
-		)
-	}
-	if etcd.Spec.Backup.Store != nil && etcd.Spec.Backup.Store.SecretRef != nil {
-		secrets = append(secrets, etcd.Spec.Backup.Store.SecretRef)
-	}
-
-	for _, secretRef := range secrets {
-		secret := &corev1.Secret{}
-		if err := r.Client.Get(ctx, types.NamespacedName{
-			Name:      secretRef.Name,
-			Namespace: etcd.Namespace,
-		}, secret); err != nil {
-			if !errors.IsNotFound(err) {
-				return err
-			}
-		} else if finalizers := sets.NewString(secret.Finalizers...); finalizers.Has(FinalizerName) {
-			logger.Infof("Removing finalizer (%s) from secret %s", FinalizerName, secret.GetName())
-			finalizers.Delete(FinalizerName)
-			secret.Finalizers = finalizers.UnsortedList()
-			if err := r.Update(ctx, secret); client.IgnoreNotFound(err) != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (r *EtcdReconciler) removeDependantStatefulset(ctx context.Context, etcd *druidv1alpha1.Etcd) error {
-	logger.Infof("Deleting etcd statefulset for etcd:%s in namespace:%s", etcd.Name, etcd.Namespace)
-	selector, err := metav1.LabelSelectorAsSelector(etcd.Spec.Selector)
-	if err != nil {
-		return err
-	}
-
-	statefulSets := &appsv1.StatefulSetList{}
-	if err = r.List(ctx, statefulSets, client.InNamespace(etcd.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
-		return err
-	}
-	for _, sts := range statefulSets.Items {
-		if canDeleteStatefulset(&sts, etcd) {
-			logger.Infof("Etcd statefulset can be deleted. Deleting statefulset: %s/%s", sts.GetNamespace(), sts.GetName())
-			if err := r.Delete(ctx, &sts); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-<<<<<<< HEAD:controllers/etcd/etcd_controller.go
 func (r *Reconciler) updateEtcdErrorStatus(etcd *druidv1alpha1.Etcd, sts *appsv1.StatefulSet, lastError error) error {
-=======
-func canDeleteStatefulset(sts *appsv1.StatefulSet, etcd *druidv1alpha1.Etcd) bool {
-	// Adding check for ownerReference to have the same delete path for statefulset.
-	// The statefulset with ownerReference will be deleted automatically when etcd is
-	// delete but we would like to explicitly delete it to maintain uniformity in the
-	// delete path.
-	return checkEtcdOwnerReference(sts.GetOwnerReferences(), etcd) ||
-		checkEtcdAnnotations(sts.GetAnnotations(), etcd)
-
-}
-
-func (r *EtcdReconciler) updateEtcdErrorStatus(etcd *druidv1alpha1.Etcd, sts *appsv1.StatefulSet, lastError error) error {
->>>>>>> master:controllers/etcd_controller.go
 	lastErrStr := fmt.Sprintf("%v", lastError)
 	etcd.Status.LastError = &lastErrStr
 	etcd.Status.ObservedGeneration = &etcd.Generation

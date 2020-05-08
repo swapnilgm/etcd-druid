@@ -1,29 +1,27 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ .Values.name }}
+  name: {{ required "Values.name is required" .Values.name }}
   namespace: {{ .Release.Namespace }}
   annotations:
-    gardener.cloud/owned-by: "{{ .Release.Namespace }}/{{ .Values.name }}"
+    gardener.cloud/owned-by: "{{ .Release.Namespace }}/{{ required "Values.name is required" .Values.name }}"
     gardener.cloud/owner-type: "etcd"
 {{- if .Values.annotations }}
 {{ toYaml .Values.annotations | indent 4 }}
 {{- end }}
   labels:
-    name: etcd
-    instance: {{ .Values.name }}
+    #instance: {{ .Values.name }}
 {{- if .Values.labels }}
 {{ toYaml .Values.labels | indent 4 }}
 {{- end }}
 spec:
   updateStrategy:
     type: RollingUpdate
-  serviceName: {{ .Values.serviceName }}
-  replicas: {{ .Values.statefulsetReplicas }}
-    selector:
+  serviceName: {{ required "Values.serviceName is required" .Values.serviceName }}
+  replicas: {{ .Values.etcd.nodes }}
+  selector:
     matchLabels:
-      name: etcd
-      instance: {{ .Values.name }}
+      #instance: {{ .Values.name }}
   template:
     metadata:
       annotations:
@@ -33,34 +31,22 @@ spec:
 {{ toYaml .Values.annotations | indent 8 }}
 {{- end }}
       labels:
-        name: etcd
-        instance: {{ .Values.name }}
+        #instance: {{ .Values.name }}
 {{- if .Values.labels }}
 {{ toYaml .Values.labels | indent 8 }}
 {{- end }}
     spec:
       hostAliases:
       - ip: "127.0.0.1"
-        hostnames:
-        - {{ .Values.name }}-local
 {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName }}
 {{- end }}
       containers:
       - name: etcd
-        image: {{ .Values.etcd.image }}
-        imagePullPolicy: {{ .Values.etcd.pullPolicy }}
+        image: {{ required "Values.etcd.image is required" .Values.etcd.image }}
+        imagePullPolicy: {{ required "Values.etcd.pullPolicy is required" .Values.etcd.pullPolicy }}
         command:
-        - /var/etcd/bin/bootstrap.sh
-        readinessProbe:
-          httpGet:
-{{- if .Values.etcd.enableTLS }}
-            scheme: HTTPS
-{{- end }}
-            path: /healthz
-            port: {{ .Values.backup.port }}
-          initialDelaySeconds: 15
-          periodSeconds: 5
+          - /var/etcd/bin/bootstrap.sh
         livenessProbe:
           exec:
             command:
@@ -72,9 +58,9 @@ spec:
             - --cert=/var/etcd/ssl/client/tls.crt
             - --key=/var/etcd/ssl/client/tls.key
             - --cacert=/var/etcd/ssl/ca/ca.crt
-            - --endpoints=https://{{ .Values.name }}-local:{{ .Values.etcd.clientPort }}
+            - --endpoints=https://{{ .Values.serviceName }}:{{ required "Values.etcd.clientPort is required" .Values.etcd.clientPort }}
 {{ else }}
-            - --endpoints=http://{{ .Values.name }}-local:{{ .Values.etcd.clientPort }}
+            - --endpoints=http://{{ .Values.serviceName }}:{{ required "Values.etcd.clientPort is required" .Values.etcd.clientPort }}
 {{ end }}
 # {{- if and .Values.etcd.username .Values.etcd.password }}
 #             - --user={{ .Values.etcd.username }}:{{ .Values.etcd.password }}
@@ -84,45 +70,45 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 5
         ports:
-        - containerPort: {{ .Values.etcd.serverPort }}
-          name: server
-          protocol: TCP
-        - containerPort: {{ .Values.etcd.clientPort }}
-          name: client
-          protocol: TCP
+          - containerPort: {{ required "Values.etcd.serverPort is required" .Values.etcd.serverPort }}
+            name: etcd-server
+            protocol: TCP
+          - containerPort: {{ required "Values.etcd.clientPort is required" .Values.etcd.clientPort }}
+            name: etcd-client
+            protocol: TCP
         resources:
 {{ toYaml .Values.etcd.resources | indent 10 }}
         volumeMounts:
-        - name: {{ .Values.volumeClaimTemplateName }}
-          mountPath: /var/etcd/data/
-        - name: etcd-bootstrap-sh
-          mountPath: /var/etcd/bin/
-        - name: etcd-config-file
-          mountPath: /var/etcd/config/
+          - name: {{ .Values.volumeClaimTemplateName }}
+            mountPath: /var/etcd/data/
+          - name: etcd-bootstrap-sh
+            mountPath: /var/etcd/bin/
+          # - name: etcd-config-file
+          #   mountPath: /var/etcd/config/
 {{- if .Values.etcd.enableTLS }}
-        - name: ca-etcd
-          mountPath: /var/etcd/ssl/ca
-        - name: etcd-server-tls
-          mountPath: /var/etcd/ssl/server
-        - name: etcd-client-tls
-          mountPath: /var/etcd/ssl/client
+          - name: ca-etcd
+            mountPath: /var/etcd/ssl/ca
+          - name: etcd-server-tls
+            mountPath: /var/etcd/ssl/server
+          - name: etcd-client-tls
+            mountPath: /var/etcd/ssl/client
 {{- end }}
       - name: backup-restore
         command:
         - etcdbrctl
         - server
         - --config-file=/var/etcdbr/config/etcdbr.conf.yaml
-        image: {{ .Values.backup.image }}
-        imagePullPolicy: {{ .Values.backup.pullPolicy }}
+        image: {{ required "Values.backup.image is required" .Values.backup.image }}
+        imagePullPolicy: {{ required "Values.backup.pullPolicy is required" .Values.backup.pullPolicy }}
         ports:
-        - containerPort: {{ .Values.backup.port }}
-          name: server
+        - containerPort: {{ required "Values.backup.port is required" .Values.backup.port }}
+          name: backup-server
           protocol: TCP
         resources:
 {{ toYaml .Values.backup.resources | indent 10 }}
         env:
-        - name: STORAGE_CONTAINER
-          value: {{ .Values.store.storageContainer }}
+        # - name: STORAGE_CONTAINER
+        #   value: {{ .Values.store.storageContainer }}
 {{- if eq .Values.store.storageProvider "S3" }}
         - name: "AWS_REGION"
           valueFrom:
@@ -197,7 +183,7 @@ spec:
               key: "accessKeyID"
 {{- end }}
         volumeMounts:
-        - name: {{ .Values.volumeClaimTemplateName }}
+        - name: {{ required "Values.volumeClaimTemplateName is required" .Values.volumeClaimTemplateName }}
           mountPath: /var/etcd/data
         - name: etcdbr-config-file
           mountPath: /var/etcdbr/config/
@@ -221,13 +207,13 @@ spec:
           items:
           - key: bootstrap.sh
             path: bootstrap.sh
-      - name: etcd-config-file
-        configMap:
-          name: {{ .Values.configMapName }}
-          defaultMode: 0644
-          items:
-          - key: etcd.conf.yaml
-            path: etcd.conf.yaml
+      # - name: etcd-config-file
+      #   configMap:
+      #     name: {{ .Values.configMapName }}
+      #     defaultMode: 0644
+      #     items:
+      #     - key: etcd.conf.yaml
+      #       path: etcd.conf.yaml
       - name: etcdbr-config-file
         configMap:
           name: {{ .Values.configMapName }}
@@ -253,13 +239,15 @@ spec:
 {{- end }}
   volumeClaimTemplates:
   - metadata:
-      name: {{ .Values.volumeClaimTemplateName }}
+      name: {{ required "Values.volumeClaimTemplateName is required" .Values.volumeClaimTemplateName }}
     spec:
       accessModes:
       - "ReadWriteOnce"
 {{ if .Values.storageClass }}
       storageClassName: {{ .Values.storageClass }}
 {{ end }}
+{{ if .Values.storageCapacity }}
       resources:
         requests:
           storage: {{ .Values.storageCapacity }}
+{{ end }}

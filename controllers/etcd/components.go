@@ -823,3 +823,23 @@ func (r *Reconciler) getStatefulSetFromEtcd(ctx context.Context, etcd *druidv1al
 
 	return ss, nil
 }
+
+// func (r *Reconciler) getStatefulSetFromEtcd(etcd *druidv1alpha1.Etcd, cm *corev1.ConfigMap, svc *corev1.Service, values map[string]interface{}) (*appsv1.StatefulSet, error) {
+// 	var err error
+// 	decoded := &appsv1.StatefulSet{}
+// 	statefulSetPath := getChartPathForStatefulSet()
+// 	chartPath := getChartPath()
+// 	renderedChart, err := r.chartApplier.Render(chartPath, etcd.Name, etcd.Namespace, values)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if _, ok := renderedChart.Files()[statefulSetPath]; !ok {
+// 		return nil, fmt.Errorf("missing configmap template file in the charts: %v", statefulSetPath)
+// 	}
+
+// 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(renderedChart.Files()[statefulSetPath])), 1024)
+// 	if err = decoder.Decode(&decoded); err != nil {
+// 		return nil, err
+// 	}
+// 	return decoded, nil
+// }
