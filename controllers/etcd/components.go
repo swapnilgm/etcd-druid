@@ -15,11 +15,13 @@
 package etcd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"github.com/gardener/etcd-druid/pkg/chartrenderer"
 	"github.com/gardener/etcd-druid/pkg/common"
 	"github.com/gardener/etcd-druid/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -29,10 +31,60 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func (r *Reconciler) getInternalServiceFromEtcd(etcd *druidv1alpha1.Etcd) (*corev1.Service, error) {
+////////////////////
+//Chart rendering //
+////////////////////
+func (r *Reconciler) getInternalServiceFromChart(renderedChart *chartrenderer.RenderedChart) (*corev1.Service, error) {
+	serviceManifest, ok := renderedChart.Files()[getChartPathForService()]
+	if !ok {
+		return nil, fmt.Errorf("missing service template file in the charts: %v", getChartPathForService())
+	}
+
+	svc := &corev1.Service{}
+	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(serviceManifest)), 1024)
+	if err := decoder.Decode(svc); err != nil {
+		return nil, err
+	}
+
+	return svc, nil
+}
+
+func (r *Reconciler) getConfigmapFromChart(renderedChart *chartrenderer.RenderedChart) (*corev1.ConfigMap, error) {
+	cmManifest, ok := renderedChart.Files()[getChartPathForConfigMap()]
+	if !ok {
+		return nil, fmt.Errorf("missing configmap template file in the charts: %v", getChartPathForConfigMap())
+	}
+
+	cm := &corev1.ConfigMap{}
+	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(cmManifest)), 1024)
+	if err := decoder.Decode(cm); err != nil {
+		return nil, err
+	}
+
+	return cm, nil
+}
+
+func (r *Reconciler) getStatefulSetFromChart(renderedChart *chartrenderer.RenderedChart) (*appsv1.StatefulSet, error) {
+	var err error
+	sts := &appsv1.StatefulSet{}
+	statefulSetPath := getChartPathForStatefulSet()
+
+	if _, ok := renderedChart.Files()[statefulSetPath]; !ok {
+		return nil, fmt.Errorf("missing configmap template file in the charts: %v", statefulSetPath)
+	}
+
+	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(renderedChart.Files()[statefulSetPath])), 1024)
+	if err = decoder.Decode(sts); err != nil {
+		return nil, err
+	}
+	return sts, nil
+}
+
+func (r *Reconciler) getExternalServiceFromEtcd(etcd *druidv1alpha1.Etcd, serviceName string) (*corev1.Service, error) {
 	sslPrefix := ""
 	if etcd.Spec.Etcd.TLS != nil {
 		sslPrefix = "-ssl"
@@ -45,25 +97,18 @@ func (r *Reconciler) getInternalServiceFromEtcd(etcd *druidv1alpha1.Etcd) (*core
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-client-internal", etcd.Name),
+			Name:      serviceName,
 			Namespace: etcd.Namespace,
-			Labels:    utils.MergeStringMaps(selector, map[string]string{"scope": "internal"}),
-			Annotations: map[string]string{
-				"service.alpha.kubernetes.io/tolerate-unready-endpoints": "true",
-			},
+			Labels: utils.MergeStringMaps(selector, map[string]string{
+				"scope": "external",
+			}),
 		},
 		Spec: corev1.ServiceSpec{
-			ClusterIP:                corev1.ClusterIPNone,
+			//ClusterIP:                assign existing clusterIP,
 			Type:                     corev1.ServiceTypeClusterIP,
-			Selector:                 selector,
+			Selector:                 utils.MergeStringMaps(selector, map[string]string{"healthy": "false"}),
 			PublishNotReadyAddresses: true,
 			Ports: []corev1.ServicePort{
-				{
-					Name:       fmt.Sprintf("etcd-server%s", sslPrefix),
-					Protocol:   corev1.ProtocolTCP,
-					Port:       2380,
-					TargetPort: intstr.FromInt(2380),
-				},
 				{
 					Name:       fmt.Sprintf("etcd-client%s", sslPrefix),
 					Protocol:   corev1.ProtocolTCP,
@@ -80,62 +125,12 @@ func (r *Reconciler) getInternalServiceFromEtcd(etcd *druidv1alpha1.Etcd) (*core
 		},
 	}
 
-	if err := controllerutil.SetControllerReference(etcd, svc, r.Scheme); err != nil {
-		return nil, err
-	}
-
 	return svc, nil
 }
 
-func (r *Reconciler) getExternalServiceFromEtcd(etcd *druidv1alpha1.Etcd) (*corev1.Service, error) {
-	sslPrefix := ""
-	if etcd.Spec.Etcd.TLS != nil {
-		sslPrefix = "-ssl"
-	}
-
-	selector, err := metav1.LabelSelectorAsMap(etcd.Spec.Selector)
-	if err != nil {
-		return nil, err
-	}
-
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-client-external", etcd.Name),
-			Namespace: etcd.Namespace,
-			Labels: utils.MergeStringMaps(selector, map[string]string{
-				"scope":   "external",
-				"healthy": "false",
-			}),
-		},
-		Spec: corev1.ServiceSpec{
-			//ClusterIP:                assign existing clusterip
-			Type:                     corev1.ServiceTypeClusterIP,
-			Selector:                 utils.MergeStringMaps(selector, map[string]string{"healthy": "false"}),
-			PublishNotReadyAddresses: true,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       fmt.Sprintf("client%s", sslPrefix),
-					Protocol:   corev1.ProtocolTCP,
-					Port:       2379,
-					TargetPort: intstr.FromInt(2379),
-				},
-				{
-					Name:       "backup",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       8080,
-					TargetPort: intstr.FromInt(8080),
-				},
-			},
-		},
-	}
-
-	if err := controllerutil.SetControllerReference(etcd, svc, r.Scheme); err != nil {
-		return nil, err
-	}
-
-	return svc, nil
-}
-
+////////////////////
+// Struct rendering
+////////////////////
 func (r *Reconciler) getConfigMapFromEtcd(etcd *druidv1alpha1.Etcd, svc *corev1.Service) (*corev1.ConfigMap, error) {
 
 	selector, err := metav1.LabelSelectorAsMap(etcd.Spec.Selector)
@@ -823,23 +818,3 @@ func (r *Reconciler) getStatefulSetFromEtcd(ctx context.Context, etcd *druidv1al
 
 	return ss, nil
 }
-
-// func (r *Reconciler) getStatefulSetFromEtcd(etcd *druidv1alpha1.Etcd, cm *corev1.ConfigMap, svc *corev1.Service, values map[string]interface{}) (*appsv1.StatefulSet, error) {
-// 	var err error
-// 	decoded := &appsv1.StatefulSet{}
-// 	statefulSetPath := getChartPathForStatefulSet()
-// 	chartPath := getChartPath()
-// 	renderedChart, err := r.chartApplier.Render(chartPath, etcd.Name, etcd.Namespace, values)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if _, ok := renderedChart.Files()[statefulSetPath]; !ok {
-// 		return nil, fmt.Errorf("missing configmap template file in the charts: %v", statefulSetPath)
-// 	}
-
-// 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(renderedChart.Files()[statefulSetPath])), 1024)
-// 	if err = decoder.Decode(&decoded); err != nil {
-// 		return nil, err
-// 	}
-// 	return decoded, nil
-// }

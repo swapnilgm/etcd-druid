@@ -12,7 +12,7 @@ annotations: {}
 labels: {}
 
 etcd:
-  nodes: 1
+  replicas: 1
   enableTLS: false
   pullPolicy: IfNotPresent
   metrics: basic

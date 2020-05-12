@@ -18,14 +18,13 @@ spec:
   updateStrategy:
     type: RollingUpdate
   serviceName: {{ required "Values.serviceName is required" .Values.serviceName }}
-  replicas: {{ .Values.etcd.nodes }}
+  replicas: {{  required "Values.etcd.replicas is required".Values.etcd.replicas }}
   selector:
     matchLabels:
       #instance: {{ .Values.name }}
   template:
     metadata:
       annotations:
-        "cluster-autoscaler.kubernetes.io/safe-to-evict": "false"
         checksum/etcd-bootstrap-configmap: {{ include (print $.Template.BasePath "/etcd-bootstrap-configmap.yaml") . | sha256sum }}
 {{- if .Values.annotations }}
 {{ toYaml .Values.annotations | indent 8 }}
