@@ -1,7 +1,8 @@
 name: test
 uid: uuid-of-etcd-resource
 serviceName: test
-configMapName: test
+configmapName: test
+statefulsetName: test
 
 #priorityClassName: foo
 
@@ -25,7 +26,8 @@ etcd:
     requests:
       cpu: 50m
       memory: 128Mi
-  quota: 8000000000
+  quota: 8589934592 #8Gib
+  initialCluster: "test-0=https://test-0:2380"
   #username: username
   #password: password
 

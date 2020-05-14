@@ -16,9 +16,11 @@ package healthz
 
 import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"github.com/gardener/etcd-druid/pkg/client/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
 
@@ -32,7 +34,14 @@ func SetupWithManager(mgr ctrl.Manager, workers int) error {
 	builder := ctrl.NewControllerManagedBy(mgr).WithOptions(controller.Options{
 		MaxConcurrentReconciles: workers,
 	})
-	reconciler := NewHealthReconciler(mgr.GetClient())
+	restCfg := mgr.GetConfig()
+	client, err := kubernetes.NewForConfig(restCfg, client.Options{
+		Scheme:mgr.GetScheme(),
+	})
+	if err != nil {
+		return err
+	}
+	reconciler := NewHealthReconciler(client)
 
 	//builder = builder.WithEventFilter(druidpredicates.Or(predicates...))
 	return builder.For(&druidv1alpha1.Etcd{}).

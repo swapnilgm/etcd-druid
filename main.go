@@ -21,6 +21,7 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/gardener/etcd-druid/controllers/etcd"
+	"github.com/gardener/etcd-druid/controllers/healthz"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	schemev1 "k8s.io/client-go/kubernetes/scheme"
@@ -81,6 +82,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := healthz.SetupWithManager(mgr, workers); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Health-controller")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")

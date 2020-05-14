@@ -25,7 +25,7 @@ func (etcd *Etcd) GetCompletedEtcdNodes() int32 {
 	if etcd.Spec.Replicas != nil {
 		return *etcd.Spec.Replicas
 	}
-	return 0
+	return 1
 }
 
 // GetCompletedEtcdServerPort returns the completed value of etcd server port.

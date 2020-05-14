@@ -48,12 +48,12 @@ data:
 {{- end }}
                 --snapshot-count=75000 \
                 --enable-v2=false \
-                --quota-backend-bytes={{ required "Values.etcd.quota is required" .Values.etcd.quota }} \
+                --quota-backend-bytes={{ required "Values.etcd.quota is required" ( int .Values.etcd.quota ) }} \
                 --listen-peer-urls=http{{ if .Values.etcd.enableTLS }}s{{ end }}://0.0.0.0:{{ required "Values.etcd.serverPort is required" .Values.etcd.serverPort }} \
                 --listen-client-urls=http{{ if .Values.etcd.enableTLS }}s{{ end }}://0.0.0.0:{{ required "Values.etcd.clientPort is required" .Values.etcd.clientPort }} \
                 --initial-advertise-peer-urls=http{{ if .Values.etcd.enableTLS }}s{{ end }}://$POD_IP:{{ required "Values.etcd.serverPort is required" .Values.etcd.serverPort }} \
                 --advertise-client-urls=http{{ if .Values.etcd.enableTLS }}s{{ end }}://$POD_IP:{{ required "Values.etcd.clientPort is required" .Values.etcd.clientPort }} \
-                --initial-cluster={{ required "Values.etcd.initialCluster is required" .Values.etcd.initialCluster }} \
+                --initial-cluster="{{ .Values.etcd.initialCluster }}" \
                 --initial-cluster-token={{ .Values.name }} \
                 --initial-cluster-state=new \
 {{- if .Values.etcd.enableTLS }}
@@ -82,11 +82,11 @@ data:
     check_and_start_etcd(){
           while true;
           do
-            wget "http{{ if .Values.etcd.enableTLS }}s{{ end }}://{{ .Values.name }}-local:{{ .Values.backup.port }}/initialization/status" -S -O status;
+            wget "http{{ if .Values.etcd.enableTLS }}s{{ end }}://$POD_NAME:{{ .Values.backup.port }}/initialization/status" -S -O status;
             STATUS=`cat status`;
             case $STATUS in
             "New")
-                  wget "http{{ if .Values.etcd.enableTLS }}s{{ end }}://{{ .Values.name }}-local:{{ .Values.backup.port }}/initialization/start?mode=$1{{- if .Values.backup.failBelowRevision }}&failbelowrevision={{ int $.Values.backup.failBelowRevision }}{{- end }}" -S -O - ;;
+                  wget "http{{ if .Values.etcd.enableTLS }}s{{ end }}://$POD_NAME:{{ .Values.backup.port }}/initialization/start?mode=$1{{- if .Values.backup.failBelowRevision }}&failbelowrevision={{ int $.Values.backup.failBelowRevision }}{{- end }}" -S -O - ;;
             "Progress")
                   sleep 1;
                   continue;;
@@ -142,7 +142,7 @@ data:
     leaderElectionConfig:
         retryPeriod: 5s
     snapshotterConfig:
-{{-if .Values.backup.fullSnapshotSchedule }}
+{{- if .Values.backup.fullSnapshotSchedule }}
         schedule: {{ .Values.backup.fullSnapshotSchedule }}
 {{- end }}
 {{- if .Values.backup.deltaSnapshotPeriod }}
@@ -156,9 +156,9 @@ data:
 {{- end}}
 {{- if .Values.backup.garbageCollectionPolicy }}
         garbageCollectionPolicy: {{ .Values.backup.garbageCollectionPolicy }}
-{{- end }}
-{{- if eq .Values.backup.garbageCollectionPolicy "LimitBased" and .Values.backup.maxBackups }}
+{{- if and (eq .Values.backup.garbageCollectionPolicy "LimitBased") .Values.backup.maxBackups }}
         maxBackups: {{ int $.Values.backup.maxBackups }}
+{{- end }}
 {{- end }}
 {{- if .Values.store.storageProvider }}
     snapstoreConfig:
@@ -176,7 +176,7 @@ data:
         initialAdvertisePeerURLs:
             - "http://localhost:2380"
         name: "default"
-        embeddedEtcdQuotaBytes: {{ required "Values.etcd.quota is required" int $.Values.etcd.quota }}
-{{-if .Values.etcd.defragmentationSchedule }}
+        embeddedEtcdQuotaBytes: {{ required "Values.etcd.quota is required" (int $.Values.etcd.quota) }}
+{{- if .Values.etcd.defragmentationSchedule }}
     defragmentationSchedule: {{ .Values.etcd.defragmentationSchedule }}
 {{- end }}
