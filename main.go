@@ -51,6 +51,7 @@ func main() {
 		ignoreOperationAnnotation bool
 	)
 
+	// TODO: Use cobra command
 	flag.IntVar(&workers, "workers", 3, "Number of worker threads.")
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
@@ -59,6 +60,7 @@ func main() {
 
 	flag.Parse()
 
+	// TODO: Configure logger
 	ctrl.SetLogger(zap.Logger(true))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -82,6 +84,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TODO: Merge with above
 	if err := healthz.SetupWithManager(mgr, workers); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Health-controller")
 		os.Exit(1)

@@ -20,6 +20,8 @@ const (
 	defaultBackupPort     = 8080
 )
 
+// TODO: Use apimachinery DefaulterFunc using default-gen generator
+
 // GetCompletedEtcdNodes returns the completed value of number of etcd nodes.
 func (etcd *Etcd) GetCompletedEtcdNodes() int32 {
 	if etcd.Spec.Replicas != nil {

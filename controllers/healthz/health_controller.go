@@ -35,15 +35,14 @@ func SetupWithManager(mgr ctrl.Manager, workers int) error {
 		MaxConcurrentReconciles: workers,
 	})
 	restCfg := mgr.GetConfig()
-	client, err := kubernetes.NewForConfig(restCfg, client.Options{
-		Scheme:mgr.GetScheme(),
+	cli, err := kubernetes.NewForConfig(restCfg, client.Options{
+		Scheme: mgr.GetScheme(),
 	})
 	if err != nil {
 		return err
 	}
-	reconciler := NewHealthReconciler(client)
+	reconciler := NewHealthReconciler(cli)
 
-	//builder = builder.WithEventFilter(druidpredicates.Or(predicates...))
 	return builder.For(&druidv1alpha1.Etcd{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&v1.Service{}).

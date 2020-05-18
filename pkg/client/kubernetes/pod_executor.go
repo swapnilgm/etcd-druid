@@ -63,13 +63,12 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 		return nil, fmt.Errorf("failed to initialized the command exector: %v", err)
 	}
 
-	err = executor.Stream(remotecommand.StreamOptions{
+	if err := executor.Stream(remotecommand.StreamOptions{
 		Stdin:  strings.NewReader(command),
 		Stdout: &stdout,
 		Stderr: &stderr,
 		Tty:    false,
-	})
-	if err != nil {
+	}); err != nil {
 		return &stderr, err
 	}
 

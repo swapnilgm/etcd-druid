@@ -76,7 +76,8 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}, nil
 	}
 
-	healthy, err := r.getBackupHealthOverExec(ctx, etcd)
+	// TODO: Discuss getBackupHealthOverExec vs getBackupHealthOverHTTP
+	healthy, err := r.getBackupHealthOverHTTP(ctx, etcd)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -113,6 +114,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	return ctrl.Result{
+		//TODO : Make this configurable
 		RequeueAfter: time.Second * 5,
 	}, nil
 }
@@ -140,12 +142,22 @@ func (r *Reconciler) getBackupHealthOverHTTP(ctx context.Context, etcd *druidv1a
 
 func (r *Reconciler) getBackupHealthOverExec(ctx context.Context, etcd *druidv1alpha1.Etcd) (bool, error) {
 	pe := kubernetes.NewPodExecutor(r.clietnset)
+	httpScheme := "http"
+	if etcd.Spec.Etcd.TLS != nil {
+		httpScheme = "https"
+	}
 	nodes := etcd.GetCompletedEtcdNodes()
 	for i := int32(0); i < nodes; i++ {
-		out, err := pe.Execute(ctx, etcd.Namespace, fmt.Sprint("%s-%d", etcd.Name, i), "backup-restore", "wget http://localhost:8080/healthz -S -O '-'")
+
+		out, err := pe.Execute(ctx, etcd.Namespace, fmt.Sprintf("%s-%d", etcd.Name, i), "backup-restore", fmt.Sprintf("wget %s://localhost:8080/healthz -S -O '-", httpScheme))
 		if err != nil {
+			// logger.Info("Output for %s ", fmt.Sprintf("%s-%d", etcd.Name, i))
+			// buf := make([]byte, 1024)
+			// out.Read(buf)
+			// logger.Info("Stderrr : %s", string(buf))
 			return false, err
 		}
+
 		decoder := yaml.NewYAMLOrJSONDecoder(out, 1024)
 		bkpHealth := &health{}
 		if err := decoder.Decode(bkpHealth); err != nil || !bkpHealth.health {
