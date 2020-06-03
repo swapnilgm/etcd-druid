@@ -20,6 +20,7 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/gardener/etcd-druid/pkg/chartrenderer"
+	"github.com/gardener/etcd-druid/pkg/common"
 	"github.com/gardener/etcd-druid/pkg/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -79,11 +80,6 @@ func (r *Reconciler) getStatefulSetFromChart(renderedChart *chartrenderer.Render
 }
 
 func (r *Reconciler) getExternalServiceFromEtcd(etcd *druidv1alpha1.Etcd, serviceName string) (*corev1.Service, error) {
-	sslPrefix := ""
-	if etcd.Spec.Etcd.TLS != nil {
-		sslPrefix = "-ssl"
-	}
-
 	selector, err := metav1.LabelSelectorAsMap(etcd.Spec.Selector)
 	if err != nil {
 		return nil, err
@@ -94,7 +90,7 @@ func (r *Reconciler) getExternalServiceFromEtcd(etcd *druidv1alpha1.Etcd, servic
 			Name:      serviceName,
 			Namespace: etcd.Namespace,
 			Labels: utils.MergeStringMaps(selector, map[string]string{
-				"scope": "external",
+				common.ServiceScopeLabel: common.ServiceScopeExternal,
 			}),
 		},
 		Spec: corev1.ServiceSpec{
@@ -104,7 +100,7 @@ func (r *Reconciler) getExternalServiceFromEtcd(etcd *druidv1alpha1.Etcd, servic
 			PublishNotReadyAddresses: true,
 			Ports: []corev1.ServicePort{
 				{
-					Name:       fmt.Sprintf("etcd-client%s", sslPrefix),
+					Name:       "etcd-client",
 					Protocol:   corev1.ProtocolTCP,
 					Port:       2379,
 					TargetPort: intstr.FromInt(2379),

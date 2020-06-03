@@ -254,11 +254,11 @@ func (r *Reconciler) reconcile(ctx context.Context, etcd *druidv1alpha1.Etcd) (c
 }
 
 func (r *Reconciler) determineInternalServiceName(ctx context.Context, etcd *druidv1alpha1.Etcd) (string, error) {
-	return r.determineService(ctx, etcd, "internal")
+	return r.determineService(ctx, etcd, common.ServiceScopeInternal)
 }
 
 func (r *Reconciler) determineExternalServiceName(ctx context.Context, etcd *druidv1alpha1.Etcd) (string, error) {
-	return r.determineService(ctx, etcd, "external")
+	return r.determineService(ctx, etcd, common.ServiceScopeExternal)
 }
 
 func (r *Reconciler) determineService(ctx context.Context, etcd *druidv1alpha1.Etcd, scope string) (string, error) {
@@ -267,7 +267,7 @@ func (r *Reconciler) determineService(ctx context.Context, etcd *druidv1alpha1.E
 		logger.Errorf("failed to convert label selector to selector, %v", err)
 		return "", err
 	}
-	req, err := labels.NewRequirement("scope", selection.Equals, []string{scope})
+	req, err := labels.NewRequirement(common.ServiceScopeLabel, selection.Equals, []string{scope})
 	if err != nil {
 		return "", err
 	}
@@ -299,15 +299,7 @@ func (r *Reconciler) determineService(ctx context.Context, etcd *druidv1alpha1.E
 			svc := filteredServices[i]
 			logger.Infof("deleting duplicate service: %s/%s", svc.Name, svc.Namespace)
 			if err := r.Delete(ctx, svc); err != nil {
-				logger.Errorf("failed to delete duplicate service: %v", err)
-
-				//TODO : Bring up discussion.
-				// How common and how much right it to use selector based approach for such services?
-				// Should we ignore deletion error or continue?
-				// If errorout, What if somebody else adds finalizer?
-				// If continue, there will be multiple services?
-
-				continue
+				return "", fmt.Errorf("failed to delete duplicate service: %v", err)
 			}
 		}
 
@@ -434,14 +426,7 @@ func (r *Reconciler) determineConfigmapName(ctx context.Context, etcd *druidv1al
 		for i := 1; i < len(filteredCMs); i++ {
 			cm := filteredCMs[i]
 			if err := r.Delete(ctx, cm); err != nil {
-				logger.Errorf("Error in deleting duplicate configmaps: %v", err)
-
-				//TODO : Bring up discussion.
-				// How common and how much right it to use selector based approach for such services?
-				// Should we ignore deletion error or continue?
-				// If errorout, What if somebody else adds finalizer?
-				// If continue, there will be multiple services?
-				continue
+				return "", fmt.Errorf("Error in deleting duplicate configmaps: %v", err)
 			}
 		}
 		return filteredCMs[0].Name, nil
@@ -484,7 +469,7 @@ func (r *Reconciler) reconcileConfigMap(ctx context.Context, etcd *druidv1alpha1
 	return cmCopy, err
 }
 
-func (r *Reconciler) determineSetName(ctx context.Context, etcd *druidv1alpha1.Etcd) (string, error) {
+func (r *Reconciler) determineStatefulSetName(ctx context.Context, etcd *druidv1alpha1.Etcd) (string, error) {
 	selector, err := metav1.LabelSelectorAsSelector(etcd.Spec.Selector)
 	if err != nil {
 		logger.Errorf("Error converting etcd selector to selector: %v", err)
@@ -515,15 +500,7 @@ func (r *Reconciler) determineSetName(ctx context.Context, etcd *druidv1alpha1.E
 		for i := 1; i < len(filteredStatefulSets); i++ {
 			set := filteredStatefulSets[i]
 			if err := r.Delete(ctx, set); err != nil {
-				logger.Errorf("Error in deleting duplicate configmaps: %v", err)
-
-				//TODO : Bring up discussion.
-				// How common and how much right it to use selector based approach for such services?
-				// Should we ignore deletion error or continue?
-				// If errorout, What if somebody else adds finalizer?
-				// If continue, there will be multiple services?
-
-				continue
+				return "", fmt.Errorf("Error in deleting duplicate configmaps: %v", err)
 			}
 		}
 		return filteredStatefulSets[0].Name, nil
@@ -670,7 +647,7 @@ func (r *Reconciler) reconcileEtcd(ctx context.Context, etcd *druidv1alpha1.Etcd
 		return nil, nil, err
 	}
 
-	setName, err := r.determineSetName(ctx, etcd)
+	statefulSetName, err := r.determineStatefulSetName(ctx, etcd)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -681,7 +658,7 @@ func (r *Reconciler) reconcileEtcd(ctx context.Context, etcd *druidv1alpha1.Etcd
 	}
 	values["serviceName"] = internalServiceName
 	values["configmapName"] = configmapName
-	values["statefulsetName"] = setName
+	values["statefulsetName"] = statefulSetName
 
 	chartPath := getChartPath()
 	renderedChart, err := r.chartApplier.Render(chartPath, etcd.Name, etcd.Namespace, values)
@@ -697,7 +674,7 @@ func (r *Reconciler) reconcileEtcd(ctx context.Context, etcd *druidv1alpha1.Etcd
 		return nil, nil, err
 	}
 
-	sts, err := r.reconcileStatefulSet(ctx, etcd, setName, renderedChart)
+	sts, err := r.reconcileStatefulSet(ctx, etcd, statefulSetName, renderedChart)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -40,14 +39,14 @@ const (
 
 // Reconciler is health recocniler object for external service created on etcd
 type Reconciler struct {
-	clietnset kubernetes.Interface
+	clientset kubernetes.Interface
 	client    client.Client
 }
 
 // NewHealthReconciler return the health reconciler object for external service created on etcd
 func NewHealthReconciler(cli kubernetes.Interface) reconcile.Reconciler {
 	return &Reconciler{
-		clietnset: cli,
+		clientset: cli,
 		client:    cli.Client(),
 	}
 }
@@ -76,7 +75,6 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}, nil
 	}
 
-	// TODO: Discuss getBackupHealthOverExec vs getBackupHealthOverHTTP
 	healthy, err := r.getBackupHealthOverHTTP(ctx, etcd)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -121,52 +119,41 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 func (r *Reconciler) getBackupHealthOverHTTP(ctx context.Context, etcd *druidv1alpha1.Etcd) (bool, error) {
 	nodes := etcd.GetCompletedEtcdNodes()
+	resultCh := make(chan healthCheckResult, nodes)
+
 	for i := int32(0); i < nodes; i++ {
 		client := http.DefaultClient
-		url := fmt.Sprintf("http://%s-%d.%s-internal.%s.svc.cluster.local:%d/healthz", etcd.Name, i, etcd.Name, etcd.Namespace, etcd.GetCompletedBackupServerPort())
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			return false, err
-		}
+		url := fmt.Sprintf("http://%s-%d.%s-internal.%s.svc:%d/healthz", etcd.Name, i, etcd.Name, etcd.Namespace, etcd.GetCompletedBackupServerPort())
 
-		resp, err := client.Do(req)
-		if err != nil {
-			return false, err
-		}
-		if resp.StatusCode != http.StatusOK {
-			return false, nil
+		go func() {
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+			if err != nil {
+				resultCh <- healthCheckResult{err: err}
+				return
+			}
+
+			resp, err := client.Do(req)
+			if err != nil {
+				resultCh <- healthCheckResult{err: err}
+				return
+			}
+			if resp.StatusCode != http.StatusOK {
+				resultCh <- healthCheckResult{}
+				return
+			}
+			resultCh <- healthCheckResult{healthy: true, err: nil}
+		}()
+	}
+
+	// We will not wait for all request to finish.
+	for nodes > 0 {
+		res := <-resultCh
+		// quite loop if first failed health check received
+		if !res.healthy {
+			return res.healthy, res.err
 		}
 	}
+	close(resultCh)
 	return true, nil
-}
-
-func (r *Reconciler) getBackupHealthOverExec(ctx context.Context, etcd *druidv1alpha1.Etcd) (bool, error) {
-	pe := kubernetes.NewPodExecutor(r.clietnset)
-	httpScheme := "http"
-	if etcd.Spec.Etcd.TLS != nil {
-		httpScheme = "https"
-	}
-	nodes := etcd.GetCompletedEtcdNodes()
-	for i := int32(0); i < nodes; i++ {
-
-		out, err := pe.Execute(ctx, etcd.Namespace, fmt.Sprintf("%s-%d", etcd.Name, i), "backup-restore", fmt.Sprintf("wget %s://localhost:8080/healthz -S -O '-", httpScheme))
-		if err != nil {
-			// logger.Info("Output for %s ", fmt.Sprintf("%s-%d", etcd.Name, i))
-			// buf := make([]byte, 1024)
-			// out.Read(buf)
-			// logger.Info("Stderrr : %s", string(buf))
-			return false, err
-		}
-
-		decoder := yaml.NewYAMLOrJSONDecoder(out, 1024)
-		bkpHealth := &health{}
-		if err := decoder.Decode(bkpHealth); err != nil || !bkpHealth.health {
-			return false, err
-		}
-	}
-	return true, nil
-}
-
-type health struct {
-	health bool `json:"health,omitempty"`
 }

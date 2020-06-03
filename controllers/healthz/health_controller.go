@@ -42,7 +42,9 @@ func SetupWithManager(mgr ctrl.Manager, workers int) error {
 		return err
 	}
 	reconciler := NewHealthReconciler(cli)
-
+	// Owns(&appsv1.StatefulSet{}). doesn't add ownerReference to resource.
+	// But since etcd-druid itself doesn't add ownerReference to statefulset,
+	// because of missing CRD support in VPA, currently this line isn't much effective.
 	return builder.For(&druidv1alpha1.Etcd{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&v1.Service{}).
